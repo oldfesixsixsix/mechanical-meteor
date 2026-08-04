@@ -17,7 +17,7 @@ vercel link --yes
 Vercel 專案本身建立成功，但自動嘗試連接 GitHub repo 的那一步失敗了：
 
 ```
-Error: Failed to connect oldfesixsixsix/mechanical-meteor to project.
+Error: Failed to connect my-account/mechanical-meteor to project.
 ```
 
 原因跟前一篇的 SSH 問題不一樣，這次是**帳號授權範圍**的問題：Vercel 要能在 push 時自動觸發部署，必須先在 GitHub 上安裝 Vercel 的 GitHub App，並授權它存取這個 repo。這是 GitHub App 安裝的標準機制，一定要在瀏覽器裡手動同意，沒有辦法用 CLI 或 API token 繞過去——這是刻意設計的安全邊界，不是 bug。
@@ -34,7 +34,7 @@ vercel --prod --yes
 
 ## 到瀏覽器裡按那個「Connect」
 
-到 Vercel 專案的 Settings → Git 頁面，手動點了 Connect Git Repository，選擇 `oldfesixsixsix/mechanical-meteor`，並在跳出的 GitHub 授權頁面同意安裝。這是整個系列裡唯一一個必須人手動點滑鼠、無法自動化的步驟。
+到 Vercel 專案的 Settings → Git 頁面，手動點了 Connect Git Repository，選擇 `my-account/mechanical-meteor`，並在跳出的 GitHub 授權頁面同意安裝。這是整個系列裡唯一一個必須人手動點滑鼠、無法自動化的步驟。
 
 ## 驗證：一個 draft 測試 commit
 

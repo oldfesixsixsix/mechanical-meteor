@@ -12,7 +12,7 @@ series: '建立 Astro 部落格'
 
 ```bash
 gh auth status
-# ✓ Logged in to github.com account oldfesixsixsix
+# ✓ Logged in to github.com account my-account
 ```
 
 照理說接下來一行指令就能把專案建成 repo 並推上去：
@@ -21,14 +21,14 @@ gh auth status
 gh repo create mechanical-meteor --public --source=. --remote=origin --push
 ```
 
-結果 repo 真的建好了（`https://github.com/oldfesixsixsix/mechanical-meteor` 都拿得到），但 push 卻失敗：
+結果 repo 真的建好了（`https://github.com/my-account/mechanical-meteor` 都拿得到），但 push 卻失敗：
 
 ```
-ERROR: Permission to oldfesixsixsix/mechanical-meteor.git denied to unhappyjavamansfriend.
+ERROR: Permission to my-account/mechanical-meteor.git denied to other-account.
 fatal: Could not read from remote repository.
 ```
 
-`unhappyjavamansfriend`？我從沒聽過這個帳號會出現在這裡。
+`other-account`？我從沒聽過這個帳號會出現在這裡。
 
 ## 根因：gh CLI 跟 git push 走的是兩條不同的認證路
 
@@ -38,10 +38,10 @@ fatal: Could not read from remote repository.
 
 ```bash
 ssh -T git@github.com
-# Hi unhappyjavamansfriend! You've successfully authenticated...
+# Hi other-account! You've successfully authenticated...
 ```
 
-答案揭曉：這台機器上配置了不只一組 GitHub 帳號的 SSH 金鑰，而 `git@github.com` 這個預設 host 綁定的，剛好是另一個帳號的金鑰，不是 `oldfesixsixsix`。
+答案揭曉：這台機器上配置了不只一組 GitHub 帳號的 SSH 金鑰，而 `git@github.com` 這個預設 host 綁定的，剛好是另一個帳號的金鑰，不是 `my-account`。
 
 ## 先用 HTTPS 頂著
 
@@ -49,7 +49,7 @@ ssh -T git@github.com
 
 ```bash
 gh auth setup-git
-git remote set-url origin https://github.com/oldfesixsixsix/mechanical-meteor.git
+git remote set-url origin https://github.com/my-account/mechanical-meteor.git
 git push -u origin main
 ```
 
@@ -63,26 +63,26 @@ HTTPS 能動，但總覺得不是長久之計——這台機器顯然是刻意�
 Host github.com-mac
   HostName github.com
   User git
-  IdentityFile ~/.ssh/id_ed25519_oldfesixsixsix
+  IdentityFile ~/.ssh/id_ed25519_my-account
   AddKeysToAgent yes
   UseKeychain yes
 
-Host github.com-unhappy
+Host github.com-other
   HostName github.com
   User git
-  IdentityFile ~/.ssh/id_ed25519_unhappy
+  IdentityFile ~/.ssh/id_ed25519_other-account
   AddKeysToAgent yes
   UseKeychain yes
 ```
 
-謎底解開：這台機器上 `github.com` 這個 host 名稱本身沒有專屬設定，會落到 SSH 的預設行為（通常抓第一把可用的金鑰），而真正對應到 `oldfesixsixsix` 帳號的，是 `github.com-mac` 這個自訂別名。多帳號情境下這是常見的 SSH 設定方式——用不同的 host 別名區分「用哪一把鑰匙開門」，而不是依賴預設值。
+謎底解開：這台機器上 `github.com` 這個 host 名稱本身沒有專屬設定，會落到 SSH 的預設行為（通常抓第一把可用的金鑰），而真正對應到 `my-account` 帳號的，是 `github.com-mac` 這個自訂別名。多帳號情境下這是常見的 SSH 設定方式——用不同的 host 別名區分「用哪一把鑰匙開門」，而不是依賴預設值。
 
 改回用 SSH，但這次用對別名：
 
 ```bash
-git remote set-url origin git@github.com-mac:oldfesixsixsix/mechanical-meteor.git
+git remote set-url origin git@github.com-mac:my-account/mechanical-meteor.git
 ssh -T git@github.com-mac
-# Hi oldfesixsixsix! You've successfully authenticated...
+# Hi my-account! You've successfully authenticated...
 ```
 
 這次認證的身份對了。之後在這台機器上對這個 repo 做任何 `git push`，都會是用正確的帳號。
