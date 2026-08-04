@@ -6,7 +6,7 @@ import { defineConfig, fontProviders } from 'astro/config';
 
 // https://astro.build/config
 export default defineConfig({
-	site: 'https://mechanical-meteor.vercel.app',
+	site: 'https://mechanical-meteor-six.vercel.app',
 	integrations: [mdx(), sitemap()],
 	fonts: [
 		{
