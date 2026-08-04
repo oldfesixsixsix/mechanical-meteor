@@ -1,0 +1,137 @@
+---
+---
+
+<button id="search-toggle" type="button" aria-label="搜尋文章">
+	<svg
+		aria-hidden="true"
+		width="20"
+		height="20"
+		viewBox="0 0 24 24"
+		fill="none"
+		stroke="currentColor"
+		stroke-width="2"
+		stroke-linecap="round"
+		stroke-linejoin="round"
+	>
+		<circle cx="11" cy="11" r="7"></circle>
+		<path d="m21 21-4.3-4.3"></path>
+	</svg>
+</button>
+
+<div id="search-modal" class="search-modal" hidden>
+	<div id="search-modal-backdrop" class="search-modal-backdrop"></div>
+	<div class="search-modal-panel" role="dialog" aria-modal="true" aria-label="搜尋文章">
+		<div id="pagefind-search"></div>
+	</div>
+</div>
+
+<style>
+	button {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 2.25em;
+		height: 2.25em;
+		padding: 0;
+		border: 0;
+		border-radius: 999px;
+		background: transparent;
+		color: rgb(var(--black));
+		cursor: pointer;
+	}
+	button:hover {
+		color: var(--accent);
+	}
+	.search-modal {
+		display: none;
+	}
+	.search-modal:not([hidden]) {
+		position: fixed;
+		inset: 0;
+		z-index: 100;
+		display: flex;
+		align-items: flex-start;
+		justify-content: center;
+		padding: 10vh 1em 1em;
+	}
+	.search-modal-backdrop {
+		position: absolute;
+		inset: 0;
+		background: rgba(0, 0, 0, 55%);
+	}
+	.search-modal-panel {
+		position: relative;
+		width: 100%;
+		max-width: 640px;
+		max-height: 70vh;
+		overflow: auto;
+		padding: 1em;
+		border-radius: 12px;
+		background: rgb(var(--surface));
+		box-shadow: var(--box-shadow);
+	}
+
+	:global(.pagefind-ui) {
+		--pagefind-ui-primary: var(--accent);
+		--pagefind-ui-text: rgb(var(--gray-dark));
+		--pagefind-ui-background: rgb(var(--surface));
+		--pagefind-ui-border: rgb(var(--gray-light));
+		--pagefind-ui-tag: rgb(var(--gray-light));
+		--pagefind-ui-font: var(--font-atkinson);
+	}
+</style>
+
+<script>
+	const toggle = document.getElementById('search-toggle');
+	const modal = document.getElementById('search-modal');
+	const backdrop = document.getElementById('search-modal-backdrop');
+	let initialized = false;
+
+	function loadScript(src: string) {
+		return new Promise<void>((resolve, reject) => {
+			const script = document.createElement('script');
+			script.src = src;
+			script.onload = () => resolve();
+			script.onerror = () => reject(new Error(`Failed to load ${src}`));
+			document.head.appendChild(script);
+		});
+	}
+
+	function loadStyle(href: string) {
+		const link = document.createElement('link');
+		link.rel = 'stylesheet';
+		link.href = href;
+		document.head.appendChild(link);
+	}
+
+	async function openModal() {
+		if (!modal) return;
+		modal.hidden = false;
+		document.body.style.overflow = 'hidden';
+		if (!initialized) {
+			initialized = true;
+			loadStyle('/pagefind/pagefind-ui.css');
+			await loadScript('/pagefind/pagefind-ui.js');
+			// @ts-ignore - PagefindUI is loaded globally by the script above
+			new PagefindUI({ element: '#pagefind-search', showSubResults: true, showImages: false });
+		}
+		modal.querySelector('input')?.focus();
+	}
+
+	function closeModal() {
+		if (!modal) return;
+		modal.hidden = true;
+		document.body.style.overflow = '';
+		toggle?.focus();
+	}
+
+	toggle?.addEventListener('click', openModal);
+	backdrop?.addEventListener('click', closeModal);
+	document.addEventListener('keydown', (event) => {
+		if (event.key === 'Escape' && modal && !modal.hidden) closeModal();
+		if ((event.metaKey || event.ctrlKey) && event.key === 'k') {
+			event.preventDefault();
+			openModal();
+		}
+	});
+</script>

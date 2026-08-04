@@ -2,6 +2,8 @@
 title: 'push 就自動上線：接上 Vercel 與草稿機制'
 description: '記錄把網站部署到 Vercel、串接 GitHub 自動部署，以及用一次測試 commit 驗證整個流程真的通了。'
 pubDate: 2026-08-04
+tags: ['Vercel', '部落格架設']
+series: '建立 Astro 部落格'
 ---
 
 ## 用 CLI 先建專案

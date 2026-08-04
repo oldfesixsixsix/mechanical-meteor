@@ -2,6 +2,8 @@
 title: '差點被自己的 SSH 金鑰擋在門外：接上 GitHub'
 description: '記錄把專案推上 GitHub 時，因為本機多組 SSH 身份設定而卡關、最後找到根因的過程。'
 pubDate: 2026-08-02
+tags: ['GitHub', '部落格架設']
+series: '建立 Astro 部落格'
 ---
 
 ## 用 gh CLI 建 repo

@@ -2,6 +2,8 @@
 title: '從零開始：用 Astro 建立這個部落格'
 description: '記錄用 npm create astro@latest 建立部落格模板，並依照自己需求調整內容架構的過程。'
 pubDate: 2026-08-01
+tags: ['Astro', '部落格架設']
+series: '建立 Astro 部落格'
 ---
 
 ## 起點：一行指令

@@ -1,14 +1,21 @@
 ---
 import { Image } from 'astro:assets';
-import type { CollectionEntry } from 'astro:content';
+import { type CollectionEntry, getCollection } from 'astro:content';
 import BaseHead from '../components/BaseHead.astro';
 import Footer from '../components/Footer.astro';
 import FormattedDate from '../components/FormattedDate.astro';
 import Header from '../components/Header.astro';
 
-type Props = CollectionEntry<'blog'>['data'];
+type Props = CollectionEntry<'blog'>['data'] & { id: CollectionEntry<'blog'>['id'] };
 
-const { title, description, pubDate, updatedDate, heroImage } = Astro.props;
+const { id, title, description, pubDate, updatedDate, heroImage, tags, series } = Astro.props;
+
+const seriesEntries = series
+	? (await getCollection('blog', ({ data }) => !data.draft && data.series === series)).sort(
+			(a, b) => a.data.pubDate.valueOf() - b.data.pubDate.valueOf(),
+		)
+	: [];
+const seriesIndex = seriesEntries.findIndex((entry) => entry.id === id);
 ---
 
 <html lang="en">
@@ -52,12 +59,55 @@ const { title, description, pubDate, updatedDate, heroImage } = Astro.props;
 			.last-updated-on {
 				font-style: italic;
 			}
+			.tags {
+				display: flex;
+				flex-wrap: wrap;
+				justify-content: center;
+				gap: 0.5em;
+				margin-top: 0.75em;
+			}
+			.tag {
+				padding: 0.25em 0.75em;
+				border-radius: 999px;
+				background: rgb(var(--gray-light));
+				color: rgb(var(--gray-dark));
+				font-size: 0.8em;
+				text-decoration: none;
+			}
+			.tag:hover {
+				color: var(--accent);
+			}
+			.series {
+				width: 720px;
+				max-width: calc(100% - 2em);
+				margin: 2em auto 0;
+				padding: 1em 1.5em;
+				border-radius: 12px;
+				background: rgb(var(--gray-light));
+			}
+			.series p {
+				margin: 0 0 0.5em 0;
+				font-weight: bold;
+			}
+			.series ol {
+				margin: 0;
+				padding-left: 1.25em;
+			}
+			.series li.current {
+				font-weight: bold;
+			}
+			.series a {
+				color: rgb(var(--gray-dark));
+			}
+			.series li.current a {
+				color: var(--accent);
+			}
 		</style>
 	</head>
 
 	<body>
 		<Header />
-		<main>
+		<main data-pagefind-body>
 			<article>
 				<div class="hero-image">
 					{heroImage && <Image width={1020} height={510} src={heroImage} alt="" />}
@@ -75,8 +125,39 @@ const { title, description, pubDate, updatedDate, heroImage } = Astro.props;
 							}
 						</div>
 						<h1>{title}</h1>
+						{
+							tags && tags.length > 0 && (
+								<div class="tags" data-pagefind-ignore>
+									{tags.map((tag) => (
+										<a class="tag" href={`/tags/${tag}/`}>
+											{tag}
+										</a>
+									))}
+								</div>
+							)
+						}
 						<hr />
 					</div>
+					{
+						series && seriesEntries.length > 0 && (
+							<div class="series" data-pagefind-ignore>
+								<p>
+									系列文章：《{series}》第 {seriesIndex + 1}/{seriesEntries.length} 篇
+								</p>
+								<ol>
+									{seriesEntries.map((entry, index) => (
+										<li class:list={{ current: index === seriesIndex }}>
+											{index === seriesIndex ? (
+												entry.data.title
+											) : (
+												<a href={`/blog/${entry.id}/`}>{entry.data.title}</a>
+											)}
+										</li>
+									))}
+								</ol>
+							</div>
+						)
+					}
 					<slot />
 				</div>
 			</article>

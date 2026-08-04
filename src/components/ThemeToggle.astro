@@ -1,0 +1,86 @@
+---
+---
+
+<button id="theme-toggle" type="button" aria-label="切換深色模式">
+	<svg
+		class="icon-sun"
+		aria-hidden="true"
+		width="20"
+		height="20"
+		viewBox="0 0 24 24"
+		fill="none"
+		stroke="currentColor"
+		stroke-width="2"
+		stroke-linecap="round"
+		stroke-linejoin="round"
+	>
+		<circle cx="12" cy="12" r="4"></circle>
+		<path
+			d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"
+		></path>
+	</svg>
+	<svg
+		class="icon-moon"
+		aria-hidden="true"
+		width="20"
+		height="20"
+		viewBox="0 0 24 24"
+		fill="none"
+		stroke="currentColor"
+		stroke-width="2"
+		stroke-linecap="round"
+		stroke-linejoin="round"
+	>
+		<path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"></path>
+	</svg>
+</button>
+
+<style>
+	button {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 2.25em;
+		height: 2.25em;
+		padding: 0;
+		border: 0;
+		border-radius: 999px;
+		background: transparent;
+		color: rgb(var(--black));
+		cursor: pointer;
+	}
+	button:hover {
+		color: var(--accent);
+	}
+	.icon-moon {
+		display: none;
+	}
+	:global(:root[data-theme='dark']) .icon-sun {
+		display: none;
+	}
+	:global(:root[data-theme='dark']) .icon-moon {
+		display: block;
+	}
+	@media (prefers-color-scheme: dark) {
+		:global(:root:not([data-theme='light'])) .icon-sun {
+			display: none;
+		}
+		:global(:root:not([data-theme='light'])) .icon-moon {
+			display: block;
+		}
+	}
+</style>
+
+<script>
+	function currentTheme(): 'light' | 'dark' {
+		const explicit = document.documentElement.dataset.theme;
+		if (explicit === 'dark' || explicit === 'light') return explicit;
+		return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+	}
+
+	document.getElementById('theme-toggle')?.addEventListener('click', () => {
+		const next = currentTheme() === 'dark' ? 'light' : 'dark';
+		document.documentElement.dataset.theme = next;
+		localStorage.setItem('theme', next);
+	});
+</script>
