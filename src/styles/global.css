@@ -5,19 +5,21 @@
  */
 
 /*
-  Jungle theme: a single, non-switchable deep-green-to-black palette.
+  Ice theme: a single, non-switchable, extreme-contrast palette (near-black
+  deep blue through near-blinding ice white). Body/paragraph text stays within
+  WCAG AA even though background/decoration push to the extremes.
   See CONTEXT.md (Immersive Zone / Reading Zone) and
-  docs/adr/0001-remove-light-dark-toggle-for-jungle-theme.md.
+  docs/adr/0002-single-theme-extreme-contrast-not-a-toggle.md.
 */
 :root {
-	--accent: #d9a94c;
-	--accent-dark: #b8862f;
-	--black: 226, 240, 230;
-	--gray: 148, 173, 158;
-	--gray-light: 30, 45, 36;
-	--gray-dark: 214, 226, 216;
-	--bg: 8, 15, 12;
-	--surface: 14, 26, 20;
+	--accent: #7fe0ff;
+	--accent-dark: #3fa8d6;
+	--black: 244, 250, 255;
+	--gray: 150, 175, 204;
+	--gray-light: 22, 40, 68;
+	--gray-dark: 210, 224, 238;
+	--bg: 3, 6, 14;
+	--surface: 9, 16, 32;
 	--gray-gradient: rgba(var(--gray-light), 35%), rgb(var(--bg));
 	--box-shadow:
 		0 2px 6px rgba(0, 0, 0, 45%), 0 8px 24px rgba(0, 0, 0, 55%),
@@ -153,9 +155,10 @@ hr {
 }
 
 /*
-  Threshold Transition: the "crossing into the jungle" View Transition.
-  Only the Immersive Zone page (data-zone="immersive", i.e. the homepage)
-  ever matches these selectors, on either side of the swap:
+  Threshold Transition: the View Transition that plays only when crossing the
+  Immersive Zone <-> Reading Zone boundary. Only the Immersive Zone page
+  (data-zone="immersive", i.e. the homepage) ever matches these selectors, on
+  either side of the swap:
   - leaving the homepage matches [data-zone="immersive"]::view-transition-old(root)
   - arriving at the homepage matches [data-zone="immersive"]::view-transition-new(root)
   Reading Zone <-> Reading Zone navigation never matches either selector, so it
@@ -164,23 +167,23 @@ hr {
   animation and swaps the DOM instantly), so no extra guard is needed here.
 */
 [data-zone='immersive']::view-transition-old(root) {
-	animation: threshold-exit 0.6s cubic-bezier(0.4, 0, 0.2, 1) both;
+	animation: threshold-shatter-out 0.6s cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 
 [data-zone='immersive']::view-transition-new(root) {
-	animation: threshold-enter 0.6s cubic-bezier(0.4, 0, 0.2, 1) both;
+	animation: threshold-shatter-in 0.6s cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 
-@keyframes threshold-exit {
+@keyframes threshold-shatter-out {
 	to {
 		clip-path: circle(0% at 50% 40%);
-		filter: brightness(0.4) saturate(1.3);
+		filter: brightness(1.6) saturate(0.6);
 	}
 }
 
-@keyframes threshold-enter {
+@keyframes threshold-shatter-in {
 	from {
 		clip-path: circle(0% at 50% 40%);
-		filter: brightness(0.4) saturate(1.3);
+		filter: brightness(1.6) saturate(0.6);
 	}
 }

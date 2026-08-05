@@ -48,7 +48,19 @@ const posts = (await getCollection('blog', ({ data }) => !data.draft)).sort(
 			}
 			ul li img {
 				margin-bottom: 0.5rem;
-				border-radius: 12px;
+				/* Structural styling, not decoration (see CONTEXT.md's Decoration vs.
+				   Structural Styling ruling) — a fractured card edge in place of a
+				   soft rounded corner. Static only; no hover/crack-growth animation. */
+				clip-path: polygon(
+					0% 4%,
+					3% 0%,
+					97% 0%,
+					100% 5%,
+					100% 92%,
+					95% 100%,
+					6% 100%,
+					0% 94%
+				);
 			}
 			ul li a {
 				display: block;
@@ -85,7 +97,8 @@ const posts = (await getCollection('blog', ({ data }) => !data.draft)).sort(
 				color: rgb(var(--accent));
 			}
 			ul a:hover img {
-				box-shadow: var(--box-shadow);
+				/* drop-shadow (not box-shadow) follows the clip-path edge shape. */
+				filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 45%));
 			}
 			@media (max-width: 720px) {
 				ul {
