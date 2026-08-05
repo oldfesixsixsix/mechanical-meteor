@@ -1,132 +1,571 @@
 ---
+import { getCollection } from 'astro:content';
 import BaseHead from '../components/BaseHead.astro';
-import Footer from '../components/Footer.astro';
-import Header from '../components/Header.astro';
+import ThresholdWhiteout from '../components/ThresholdWhiteout.astro';
 import { SITE_DESCRIPTION, SITE_TITLE } from '../consts';
+
+// Reused as the "最新一篇" entry point from /demo/hero_to_article_flow.html,
+// sourced from the real content collection instead of the prototype's
+// hardcoded placeholder.
+const posts = (await getCollection('blog', ({ data }) => !data.draft)).sort(
+	(a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf(),
+);
+const latestPost = posts[0];
 ---
 
 <!doctype html>
 <html lang="en">
 	<head>
 		<BaseHead title={SITE_TITLE} description={SITE_DESCRIPTION} />
-		<script is:inline>
-			// Entrance-once-per-session gate: reads sessionStorage (which CSS can't
-			// touch) and, if the entrance already played this session, marks <html>
-			// with data-skip-entrance before first paint so the CSS entrance
-			// keyframe never starts (no flash-then-cut). This is the narrow
-			// input-reading exception documented in CONTEXT.md — the animation
-			// itself stays entirely in CSS.
-			try {
-				if (sessionStorage.getItem('ice-entrance-played')) {
-					document.documentElement.dataset.skipEntrance = 'true';
-				} else {
-					sessionStorage.setItem('ice-entrance-played', 'true');
-				}
-			} catch {
-				// Storage unavailable (private mode, etc.) — entrance just plays
-				// every time. Acceptable degradation, not a correctness bug.
-			}
-		</script>
 	</head>
 	<body data-zone="immersive">
-		<Header />
-		<main class="ice-hero">
-			<div class="ice-scene" aria-hidden="true">
-				<svg
-					class="glacier glacier--far"
-					viewBox="0 0 800 220"
-					preserveAspectRatio="none"
-				>
-					<polygon
-						points="0,220 0,140 90,95 180,130 260,70 360,115 460,60 560,110 660,75 760,120 800,90 800,220"
-						fill="currentColor"
-					></polygon>
-				</svg>
-				<svg
-					class="glacier glacier--mid"
-					viewBox="0 0 800 220"
-					preserveAspectRatio="none"
-				>
-					<polygon
-						points="0,220 0,170 120,110 240,150 340,90 480,145 600,100 720,150 800,120 800,220"
-						fill="currentColor"
-					></polygon>
-				</svg>
-				<svg
-					class="glacier glacier--near"
-					viewBox="0 0 800 220"
-					preserveAspectRatio="none"
-				>
-					<polygon
-						points="0,220 0,200 100,150 220,190 320,140 460,195 580,150 700,195 800,170 800,220"
-						fill="currentColor"
-					></polygon>
-				</svg>
+		<ThresholdWhiteout />
 
-				<div class="aurora"></div>
+		<!--
+		  The Immersive Zone: reused directly from /demo/ice_terrain_3d.html and
+		  /demo/hero_to_article_flow.html. This markup IS the fallback (dark
+		  background, real headline, a real link) by construction — the WebGL
+		  setup script below only ever *adds* a canvas into #canvas-wrap when
+		  WebGL is available and prefers-reduced-motion isn't set. There is no
+		  separate fallback tree to keep in sync.
 
-				<div class="snowfall">
-					<div class="snow-layer snow-layer--1"></div>
-					<div class="snow-layer snow-layer--2"></div>
-					<div class="snow-layer snow-layer--3"></div>
+		  This page intentionally reuses the prototypes' own self-contained nav
+		  (logo + hint) instead of the shared <Header>/<Footer> — that's what's
+		  actually in the confirmed prototypes, not a redesign.
+		-->
+		<main class="ice-hero" id="ice-hero">
+			<div class="canvas-wrap" id="canvas-wrap" aria-hidden="true"></div>
+
+			<div class="overlay">
+				<nav>
+					<a class="logo" href="/">{SITE_TITLE}</a>
+					<div class="hint">拖曳可轉動視角</div>
+				</nav>
+
+				<div class="bottom-bar">
+					<div class="headline">
+						<div class="eyebrow">如履薄冰 · ON THIN ICE</div>
+						<h1>{SITE_TITLE}</h1>
+						<p class="sub">{SITE_DESCRIPTION}</p>
+					</div>
+
+					<div class="hero-actions">
+						{
+							latestPost && (
+								<a class="floe" id="enter-article" href={`/blog/${latestPost.id}/`}>
+									<div class="label">最新一篇</div>
+									<div class="title">{latestPost.data.title}</div>
+									<div class="hint">點擊進入文章 →</div>
+								</a>
+							)
+						}
+						<button class="regen-btn" id="regen" type="button" hidden>重新生成地形 ↻</button>
+					</div>
 				</div>
-
-				<svg class="icicle icicle--left" viewBox="0 0 70 150">
-					<path
-						d="M0 0 L70 0 L54 70 L40 46 L30 104 L16 64 L8 128 L0 70 Z"
-						fill="currentColor"
-					></path>
-				</svg>
-				<svg class="icicle icicle--right" viewBox="0 0 70 150">
-					<path
-						d="M0 0 L70 0 L62 68 L48 44 L38 120 L24 60 L12 100 L0 60 Z"
-						fill="currentColor"
-					></path>
-				</svg>
-
-				<svg class="crack-field" viewBox="0 0 800 500" preserveAspectRatio="none">
-					<path
-						class="crack crack--a"
-						d="M40 460 L220 380 L300 410 L420 300 L520 340 L680 220 L760 250"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="3"
-					></path>
-					<path
-						class="crack crack--b"
-						d="M300 410 L340 470 M420 300 L400 240 M520 340 L560 400"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="2"
-					></path>
-				</svg>
-
-				<div class="cold-light"></div>
-			</div>
-
-			<div class="hero-content">
-				<h1>{SITE_TITLE}</h1>
-				<p>{SITE_DESCRIPTION}</p>
-				<a class="cta" href="/blog">走到對岸</a>
-				<a class="cta" href="/donate">給他20元打車</a>
 			</div>
 		</main>
-		<Footer />
 
 		<script>
-			const hero = document.querySelector('.ice-hero');
-			if (hero instanceof HTMLElement && window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
-				hero.addEventListener('mousemove', (event) => {
-					const rect = hero.getBoundingClientRect();
-					const x = ((event.clientX - rect.left) / rect.width) * 100;
-					const y = ((event.clientY - rect.top) / rect.height) * 100;
-					hero.style.setProperty('--cursor-x', `${x}%`);
-					hero.style.setProperty('--cursor-y', `${y}%`);
-					hero.dataset.cursorActive = 'true';
+			// Astro's client router only ever evaluates a *bundled* module script's
+			// top-level code once per session (the browser's own module cache dedupes
+			// it across "visits" to the same page) — data-astro-rerun exists to force
+			// re-execution, but it does that by re-injecting the script as literal
+			// inline text on every real navigation, which can't contain `import`
+			// statements. So the actual Three.js logic lives here, in a normal
+			// bundled module (defined once), and the tiny data-astro-rerun script
+			// below just calls the entry point it exposes — that's what re-runs on
+			// every real return to the homepage.
+			import * as THREE from 'three';
+			import { navigate } from 'astro:transitions/client';
+
+			// ---------- capability check: fallback stays as-is if either fails ----------
+			function supportsWebGL() {
+				try {
+					const canvas = document.createElement('canvas');
+					return !!(
+						window.WebGLRenderingContext &&
+						(canvas.getContext('webgl2') || canvas.getContext('webgl'))
+					);
+				} catch {
+					return false;
+				}
+			}
+
+			function initIceScene() {
+				const hero = document.getElementById('ice-hero');
+				const canvasWrap = document.getElementById('canvas-wrap');
+				const regenButton = document.getElementById('regen');
+				if (!hero || !canvasWrap || !regenButton) {
+					throw new Error('ice-hero markup missing expected elements');
+				}
+
+				const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+				if (!supportsWebGL() || prefersReducedMotion) return;
+
+				initScene();
+
+				function initScene() {
+				// ---------- Perlin 2D noise (seedable), from ice_terrain_3d.html ----------
+				function makePerlin(seed) {
+					const perm = new Uint8Array(256);
+					for (let i = 0; i < 256; i++) perm[i] = i;
+					let s = seed || 1;
+					function rand() {
+						s = (s * 9301 + 49297) % 233280;
+						return s / 233280;
+					}
+					for (let i = 255; i > 0; i--) {
+						const j = Math.floor(rand() * (i + 1));
+						const t = perm[i];
+						perm[i] = perm[j];
+						perm[j] = t;
+					}
+					const p = new Uint8Array(512);
+					for (let i = 0; i < 512; i++) p[i] = perm[i & 255];
+					function fade(t) {
+						return t * t * t * (t * (t * 6 - 15) + 10);
+					}
+					function lerp(a, b, t) {
+						return a + t * (b - a);
+					}
+					function grad(hash, x, y) {
+						const h = hash & 7;
+						const u = h < 4 ? x : y,
+							v = h < 4 ? y : x;
+						return ((h & 1) ? -u : u) + ((h & 2) ? -2 * v : 2 * v);
+					}
+					return function noise(x, y) {
+						const X = Math.floor(x) & 255,
+							Y = Math.floor(y) & 255;
+						x -= Math.floor(x);
+						y -= Math.floor(y);
+						const u = fade(x),
+							v = fade(y);
+						const aa = p[p[X] + Y],
+							ab = p[p[X] + Y + 1],
+							ba = p[p[X + 1] + Y],
+							bb = p[p[X + 1] + Y + 1];
+						return lerp(
+							lerp(grad(aa, x, y), grad(ba, x - 1, y), u),
+							lerp(grad(ab, x, y - 1), grad(bb, x - 1, y - 1), u),
+							v,
+						);
+					};
+				}
+
+				// ---------- device tier ----------
+				// Desktop reuses ice_terrain_3d.html's fuller values; mobile reuses
+				// hero_to_article_flow.html's lighter ones — the same 640px breakpoint
+				// convention used by every prior theme's mobile simplification.
+				const isMobile = window.innerWidth < 640;
+				const SEGMENTS = isMobile ? 90 : 130;
+				const SNOW_COUNT = isMobile ? 900 : 2200;
+				const SIZE = 46;
+
+				// ---------- renderer / scene / camera ----------
+				const renderer = new THREE.WebGLRenderer({ antialias: true });
+				renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+				renderer.setSize(canvasWrap.clientWidth, canvasWrap.clientHeight);
+				renderer.outputColorSpace = THREE.SRGBColorSpace;
+				renderer.toneMapping = THREE.ACESFilmicToneMapping;
+				renderer.toneMappingExposure = 1.15;
+				canvasWrap.appendChild(renderer.domElement);
+
+				const scene = new THREE.Scene();
+				scene.fog = new THREE.FogExp2(0x0a1522, 0.032);
+
+				const camera = new THREE.PerspectiveCamera(
+					45,
+					canvasWrap.clientWidth / canvasWrap.clientHeight,
+					0.1,
+					200,
+				);
+
+				function onResize() {
+					camera.aspect = canvasWrap.clientWidth / canvasWrap.clientHeight;
+					camera.updateProjectionMatrix();
+					renderer.setSize(canvasWrap.clientWidth, canvasWrap.clientHeight);
+				}
+				window.addEventListener('resize', onResize);
+
+				// ---------- sky dome (aurora gradient shader) ----------
+				function makeSkyMesh() {
+					const geo = new THREE.SphereGeometry(80, 32, 32);
+					const mat = new THREE.ShaderMaterial({
+						uniforms: {
+							time: { value: 0 },
+							topColor: { value: new THREE.Color(0x142338) },
+							bottomColor: { value: new THREE.Color(0x04070d) },
+							auroraA: { value: new THREE.Color(0x3ee6c4) },
+							auroraB: { value: new THREE.Color(0x8a7cf0) },
+						},
+						vertexShader: `
+							varying vec3 vPos;
+							void main() {
+								vPos = position;
+								gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+							}
+						`,
+						fragmentShader: `
+							varying vec3 vPos;
+							uniform float time;
+							uniform vec3 topColor, bottomColor, auroraA, auroraB;
+							void main() {
+								float h = normalize(vPos).y * 0.5 + 0.5;
+								vec3 base = mix(bottomColor, topColor, h);
+								float band = sin(vPos.x * 0.05 + time * 0.15) * 0.5 + 0.5;
+								band *= smoothstep(0.15, 0.75, h) * smoothstep(1.0, 0.6, h);
+								vec3 aurora = mix(auroraA, auroraB, sin(vPos.z * 0.04 + time * 0.1) * 0.5 + 0.5);
+								vec3 color = base + aurora * band * 0.35;
+								gl_FragColor = vec4(color, 1.0);
+							}
+						`,
+						side: THREE.BackSide,
+					});
+					return new THREE.Mesh(geo, mat);
+				}
+
+				const skyMesh = makeSkyMesh();
+				scene.add(skyMesh);
+
+				// ---------- environment map (for PBR reflections/transmission) ----------
+				function buildEnvMap() {
+					const envScene = new THREE.Scene();
+					envScene.add(makeSkyMesh());
+					const dl = new THREE.DirectionalLight(0xcfe9f5, 1.4);
+					dl.position.set(6, 10, 4);
+					envScene.add(dl);
+					envScene.add(new THREE.AmbientLight(0x2a3f52, 0.7));
+
+					const cubeRT = new THREE.WebGLCubeRenderTarget(256, {
+						format: THREE.RGBAFormat,
+						generateMipmaps: true,
+						minFilter: THREE.LinearMipmapLinearFilter,
+					});
+					const cubeCam = new THREE.CubeCamera(0.1, 100, cubeRT);
+					envScene.add(cubeCam);
+					cubeCam.update(renderer, envScene);
+					return cubeRT.texture;
+				}
+				const envMap = buildEnvMap();
+				scene.environment = envMap;
+
+				// ---------- lights ----------
+				const dirLight = new THREE.DirectionalLight(0xdbeeff, 1.6);
+				dirLight.position.set(8, 14, 6);
+				scene.add(dirLight);
+
+				scene.add(new THREE.AmbientLight(0x233d52, 0.55));
+
+				const rim = new THREE.PointLight(0x3ee6c4, 1.4, 40);
+				rim.position.set(-10, 4, -8);
+				scene.add(rim);
+
+				const rim2 = new THREE.PointLight(0x8a7cf0, 1.0, 40);
+				rim2.position.set(10, 3, -10);
+				scene.add(rim2);
+
+				// ---------- procedural ice terrain ----------
+				let terrainMesh = null;
+
+				function buildTerrain(seed) {
+					if (terrainMesh) {
+						scene.remove(terrainMesh);
+						terrainMesh.geometry.dispose();
+						terrainMesh.material.dispose();
+					}
+					const noise = makePerlin(seed);
+					const geo = new THREE.PlaneGeometry(SIZE, SIZE, SEGMENTS, SEGMENTS);
+					geo.rotateX(-Math.PI / 2);
+					const pos = geo.attributes.position;
+					const colors = new Float32Array(pos.count * 3);
+					const cA = new THREE.Color(0x0b2032);
+					const cB = new THREE.Color(0xeaf7ff);
+					const cTeal = new THREE.Color(0x3ee6c4);
+
+					for (let i = 0; i < pos.count; i++) {
+						const x = pos.getX(i),
+							z = pos.getZ(i);
+						let h = 0,
+							amp = 1,
+							freq = 0.045,
+							norm = 0;
+						for (let o = 0; o < 5; o++) {
+							h += noise(x * freq + seed, z * freq - seed) * amp;
+							norm += amp;
+							amp *= 0.5;
+							freq *= 2;
+						}
+						h /= norm;
+						const ridgeN = noise(x * 0.09 + seed * 2, z * 0.09 - seed * 2);
+						const ridge = Math.pow(1 - Math.abs(ridgeN), 4);
+						const height = h * 2.4 + ridge * 1.1;
+						pos.setY(i, height);
+
+						const t = THREE.MathUtils.clamp((height + 1.6) / 3.2, 0, 1);
+						const c = cA.clone().lerp(cB, t);
+						if (ridge > 0.5) c.lerp(cTeal, (ridge - 0.5) * 0.5);
+						colors[i * 3] = c.r;
+						colors[i * 3 + 1] = c.g;
+						colors[i * 3 + 2] = c.b;
+					}
+					geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+					geo.computeVertexNormals();
+
+					const mat = new THREE.MeshPhysicalMaterial({
+						vertexColors: true,
+						roughness: 0.3,
+						metalness: 0.04,
+						transmission: 0.5,
+						thickness: 1.3,
+						ior: 1.31,
+						clearcoat: 0.6,
+						clearcoatRoughness: 0.18,
+						envMap: envMap,
+						envMapIntensity: 1.25,
+						side: THREE.DoubleSide,
+					});
+
+					terrainMesh = new THREE.Mesh(geo, mat);
+					scene.add(terrainMesh);
+				}
+				buildTerrain(Math.random() * 1000);
+
+				// ---------- snow particle point cloud ----------
+				function makeSnowTexture() {
+					const c = document.createElement('canvas');
+					c.width = c.height = 64;
+					const ctx = c.getContext('2d');
+					const g = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+					g.addColorStop(0, 'rgba(255,255,255,1)');
+					g.addColorStop(0.4, 'rgba(255,255,255,0.7)');
+					g.addColorStop(1, 'rgba(255,255,255,0)');
+					ctx.fillStyle = g;
+					ctx.fillRect(0, 0, 64, 64);
+					return new THREE.CanvasTexture(c);
+				}
+
+				const snowGeo = new THREE.BufferGeometry();
+				const positions = new Float32Array(SNOW_COUNT * 3);
+				const velocities = new Float32Array(SNOW_COUNT);
+				const phases = new Float32Array(SNOW_COUNT);
+
+				for (let i = 0; i < SNOW_COUNT; i++) {
+					positions[i * 3] = (Math.random() - 0.5) * SIZE;
+					positions[i * 3 + 1] = Math.random() * 22;
+					positions[i * 3 + 2] = (Math.random() - 0.5) * SIZE;
+					velocities[i] = 0.4 + Math.random() * 0.9;
+					phases[i] = Math.random() * Math.PI * 2;
+				}
+				snowGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+				const snowMat = new THREE.PointsMaterial({
+					size: 0.16,
+					map: makeSnowTexture(),
+					transparent: true,
+					depthWrite: false,
+					sizeAttenuation: true,
+					opacity: 0.9,
+					color: 0xffffff,
 				});
-				hero.addEventListener('mouseleave', () => {
-					hero.dataset.cursorActive = 'false';
-				});
+				const snowPoints = new THREE.Points(snowGeo, snowMat);
+				scene.add(snowPoints);
+
+				// ---------- interaction: drag to orbit ----------
+				let isDragging = false,
+					lastX = 0,
+					lastY = 0;
+				let theta = 0.5,
+					phi = 1.15,
+					radius = 15;
+
+				function updateCamera() {
+					camera.position.x = radius * Math.sin(phi) * Math.sin(theta);
+					camera.position.z = radius * Math.sin(phi) * Math.cos(theta);
+					camera.position.y = radius * Math.cos(phi) + 3;
+					camera.lookAt(0, 1, 0);
+				}
+				updateCamera();
+
+				renderer.domElement.style.touchAction = 'none';
+
+				function onPointerDown(e) {
+					isDragging = true;
+					lastX = e.clientX;
+					lastY = e.clientY;
+				}
+				function onPointerUp() {
+					isDragging = false;
+				}
+				function onPointerMove(e) {
+					if (!isDragging) return;
+					const dx = e.clientX - lastX,
+						dy = e.clientY - lastY;
+					lastX = e.clientX;
+					lastY = e.clientY;
+					theta -= dx * 0.005;
+					phi = THREE.MathUtils.clamp(phi - dy * 0.005, 0.4, 1.5);
+					updateCamera();
+				}
+				function onWheel(e) {
+					radius = THREE.MathUtils.clamp(radius + e.deltaY * 0.01, 8, 28);
+					updateCamera();
+				}
+				renderer.domElement.addEventListener('pointerdown', onPointerDown);
+				window.addEventListener('pointerup', onPointerUp);
+				window.addEventListener('pointermove', onPointerMove);
+				renderer.domElement.addEventListener('wheel', onWheel, { passive: true });
+
+				// ---------- regenerate button ----------
+				function onRegenClick() {
+					buildTerrain(Math.random() * 1000);
+				}
+				regenButton.addEventListener('click', onRegenClick);
+				regenButton.hidden = false;
+
+				// ---------- Threshold Transition: dive -> whiteout -> real navigate() ----------
+				let diving = false,
+					diveT = 0,
+					diveStartRadius = radius,
+					diveStartPhi = phi;
+
+				function enterReadingZone(href) {
+					if (diving) return;
+					diving = true;
+					diveT = 0;
+					// Fixed vs. the prototype: interpolate from wherever the camera
+					// actually is (it may have been manually dragged), not a hardcoded
+					// baseline — avoids a visible snap at dive-start.
+					diveStartRadius = radius;
+					diveStartPhi = phi;
+
+					const whiteout = document.getElementById('threshold-whiteout');
+					if (whiteout) whiteout.style.opacity = '1';
+
+					window.setTimeout(() => {
+						navigate(href);
+					}, 650);
+				}
+
+				function isReadingZoneLink(anchor) {
+					if (!anchor || anchor.origin !== window.location.origin) return false;
+					if (anchor.target === '_blank') return false;
+					if (anchor.pathname === window.location.pathname) return false;
+					return true;
+				}
+
+				function onDocumentClick(event) {
+					if (event.defaultPrevented || event.button !== 0) return;
+					if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+					const anchor = event.target instanceof Element ? event.target.closest('a') : null;
+					if (!isReadingZoneLink(anchor)) return;
+					event.preventDefault();
+					enterReadingZone(anchor.href);
+				}
+				document.addEventListener('click', onDocumentClick, true);
+
+				// ---------- render loop ----------
+				const clock = new THREE.Clock();
+				let rafId = 0;
+				function animate() {
+					rafId = requestAnimationFrame(animate);
+					const dt = clock.getDelta();
+					const elapsed = clock.getElapsedTime();
+
+					skyMesh.material.uniforms.time.value = elapsed;
+
+					const posAttr = snowGeo.attributes.position;
+					for (let i = 0; i < SNOW_COUNT; i++) {
+						let y = posAttr.array[i * 3 + 1] - velocities[i] * dt * 1.4;
+						if (y < -1) y = 20 + Math.random() * 2;
+						posAttr.array[i * 3 + 1] = y;
+						posAttr.array[i * 3] += Math.sin(elapsed * 0.5 + phases[i]) * 0.003;
+					}
+					posAttr.needsUpdate = true;
+
+					if (diving) {
+						diveT += dt;
+						const p = Math.min(diveT / 1.1, 1);
+						radius = diveStartRadius - p * (diveStartRadius - 3);
+						phi = diveStartPhi - p * 0.5;
+						updateCamera();
+					} else if (!isDragging) {
+						theta += dt * 0.02;
+						updateCamera();
+					}
+
+					rim.position.x = Math.sin(elapsed * 0.2) * 10;
+					rim2.position.x = Math.cos(elapsed * 0.17) * 10;
+
+					renderer.render(scene, camera);
+				}
+				animate();
+
+				// ---------- resource disposal on real navigation away from home ----------
+				function disposeScene() {
+					cancelAnimationFrame(rafId);
+					window.removeEventListener('resize', onResize);
+					window.removeEventListener('pointerup', onPointerUp);
+					window.removeEventListener('pointermove', onPointerMove);
+					renderer.domElement.removeEventListener('pointerdown', onPointerDown);
+					renderer.domElement.removeEventListener('wheel', onWheel);
+					regenButton.removeEventListener('click', onRegenClick);
+					document.removeEventListener('click', onDocumentClick, true);
+
+					scene.traverse((obj) => {
+						if (obj.geometry) obj.geometry.dispose();
+						const materials = obj.material
+							? Array.isArray(obj.material)
+								? obj.material
+								: [obj.material]
+							: [];
+						for (const material of materials) {
+							if (material.map) material.map.dispose();
+							material.dispose();
+						}
+					});
+					envMap.dispose();
+					renderer.dispose();
+					renderer.domElement.remove();
+
+					document.removeEventListener('astro:before-swap', disposeScene);
+					if (window.__iceSceneCleanup === disposeScene) {
+						delete window.__iceSceneCleanup;
+					}
+				}
+
+				// initIceScene() re-runs on every real return to the homepage (see the
+				// trigger script below) — replace any stale listener from a previous
+				// mount rather than stacking a new one on top of it.
+				if (window.__iceSceneCleanup) {
+					document.removeEventListener('astro:before-swap', window.__iceSceneCleanup);
+				}
+				window.__iceSceneCleanup = disposeScene;
+				document.addEventListener('astro:before-swap', disposeScene);
+				}
+			}
+
+			window.__initIceScene = initIceScene;
+
+			// Module scripts are deferred (they run after the document is parsed),
+			// but the data-astro-rerun classic script below runs immediately in
+			// document order — on the very first load it would fire before
+			// __initIceScene exists. Call it directly here for that first-ever
+			// execution; the trigger below handles every subsequent real return to
+			// this page, once the module (and this window property) already exist.
+			initIceScene();
+		</script>
+
+		<!--
+		  This is the piece that actually needs data-astro-rerun: Astro re-injects
+		  it as literal inline text on every real navigation to this page (unlike
+		  the bundled module above, which the browser's module cache only
+		  evaluates once), so it's the trigger that makes the scene reinitialize
+		  each time a visitor returns home.
+		-->
+		<script data-astro-rerun>
+			if (typeof window.__initIceScene === 'function') {
+				window.__initIceScene();
 			}
 		</script>
 	</body>
@@ -135,261 +574,165 @@ import { SITE_DESCRIPTION, SITE_TITLE } from '../consts';
 <style>
 	.ice-hero {
 		position: relative;
-		display: flex;
-		align-items: center;
-		justify-content: center;
 		width: 100%;
-		max-width: 100%;
-		min-height: min(88vh, 760px);
+		min-height: 100vh;
 		margin: 0;
-		padding: 3em 1em;
 		overflow: hidden;
-		background:
-			radial-gradient(ellipse 65% 45% at 50% 15%, rgba(var(--gray-light), 65%), transparent 70%),
-			linear-gradient(180deg, rgb(var(--surface)) 0%, rgb(var(--bg)) 100%);
-		isolation: isolate;
-		filter: blur(0) brightness(1) saturate(1);
+		background: linear-gradient(180deg, rgb(var(--surface)) 0%, rgb(var(--bg)) 100%);
+		color: rgb(var(--black));
 	}
 
-	/* Entrance moment: plays once per homepage entry this session (gated by the
-	   inline script above) and only when the visitor hasn't asked to reduce
-	   motion. Default (no animation) state is the settled hero, so this fails
-	   safe if JS is unavailable. */
-	@media (prefers-reduced-motion: no-preference) {
-		:root:not([data-skip-entrance]) .ice-hero {
-			animation: entrance-clear 1.3s cubic-bezier(0.16, 1, 0.3, 1) both;
-		}
-	}
-	@keyframes entrance-clear {
-		0% {
-			filter: blur(22px) brightness(2.2) saturate(0.3);
-		}
-		100% {
-			filter: blur(0) brightness(1) saturate(1);
-		}
-	}
-
-	.ice-scene {
+	.canvas-wrap {
 		position: absolute;
 		inset: 0;
 		z-index: 0;
-		pointer-events: none;
-		overflow: hidden;
+	}
+	.canvas-wrap :global(canvas) {
+		display: block;
 	}
 
-	.glacier {
-		position: absolute;
-		bottom: 0;
-		left: 0;
-		width: 100%;
-		height: 55%;
-	}
-	.glacier--far {
-		height: 40%;
-		color: rgba(150, 190, 230, 30%);
-	}
-	.glacier--mid {
-		height: 48%;
-		color: rgba(120, 165, 210, 45%);
-	}
-	.glacier--near {
-		height: 58%;
-		color: rgba(var(--surface), 90%);
-	}
-
-	.aurora {
-		position: absolute;
-		top: -8%;
-		left: -20%;
-		width: 140%;
-		height: 50%;
-		background: linear-gradient(
-			100deg,
-			transparent 0%,
-			rgba(84, 227, 180, 50%) 22%,
-			rgba(120, 200, 255, 48%) 46%,
-			rgba(180, 120, 255, 42%) 68%,
-			transparent 86%
-		);
-		filter: blur(20px);
-		mix-blend-mode: screen;
-		opacity: 0.85;
-	}
-	@media (prefers-reduced-motion: no-preference) {
-		.aurora {
-			animation: aurora-drift 16s ease-in-out infinite;
-		}
-	}
-	@keyframes aurora-drift {
-		0%,
-		100% {
-			transform: translateX(-4%) scaleY(1);
-		}
-		50% {
-			transform: translateX(4%) scaleY(1.08);
-		}
-	}
-
-	.snowfall {
-		position: absolute;
-		inset: -10%;
-	}
-	.snow-layer {
-		position: absolute;
-		inset: 0;
-		background-repeat: repeat;
-	}
-	.snow-layer--1 {
-		background-image: radial-gradient(circle, rgba(255, 255, 255, 95%) 1px, transparent 1.6px);
-		background-size: 42px 60px;
-		opacity: 0.9;
-	}
-	.snow-layer--2 {
-		background-image: radial-gradient(circle, rgba(255, 255, 255, 80%) 1.6px, transparent 2.4px);
-		background-size: 90px 130px;
-		opacity: 0.7;
-	}
-	.snow-layer--3 {
-		background-image: radial-gradient(circle, rgba(255, 255, 255, 65%) 2.4px, transparent 3.4px);
-		background-size: 150px 210px;
-		opacity: 0.5;
-	}
-	@media (prefers-reduced-motion: no-preference) {
-		.snow-layer--1 {
-			animation: snow-drift-1 6s linear infinite;
-		}
-		.snow-layer--2 {
-			animation: snow-drift-2 10s linear infinite;
-		}
-		.snow-layer--3 {
-			animation: snow-drift-3 16s linear infinite;
-		}
-	}
-	@keyframes snow-drift-1 {
-		from {
-			background-position: 0 0;
-		}
-		to {
-			background-position: -60px 600px;
-		}
-	}
-	@keyframes snow-drift-2 {
-		from {
-			background-position: 0 0;
-		}
-		to {
-			background-position: 90px 900px;
-		}
-	}
-	@keyframes snow-drift-3 {
-		from {
-			background-position: 0 0;
-		}
-		to {
-			background-position: -140px 1200px;
-		}
-	}
-
-	.icicle {
-		position: absolute;
-		top: 0;
-		width: clamp(3em, 7vw, 5em);
-		height: auto;
-		color: rgba(220, 240, 255, 75%);
-		filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 40%));
-	}
-	.icicle--left {
-		left: 6%;
-	}
-	.icicle--right {
-		right: 8%;
-	}
-
-	.crack-field {
-		position: absolute;
-		inset: 0;
-		width: 100%;
-		height: 100%;
-		color: rgba(200, 230, 255, 55%);
-		-webkit-mask-image: radial-gradient(
-			circle 240px at var(--cursor-x, 50%) var(--cursor-y, 55%),
-			black 0%,
-			black 35%,
-			transparent 78%
-		);
-		mask-image: radial-gradient(
-			circle 240px at var(--cursor-x, 50%) var(--cursor-y, 55%),
-			black 0%,
-			black 35%,
-			transparent 78%
-		);
-		opacity: 0.55;
-		transition: opacity 0.3s ease;
-	}
-	[data-cursor-active='true'] .crack-field {
-		opacity: 1;
-		color: rgba(230, 245, 255, 85%);
-	}
-
-	.cold-light {
-		position: absolute;
-		inset: 0;
-		background: radial-gradient(
-			circle 260px at var(--cursor-x, 50%) var(--cursor-y, 55%),
-			rgba(180, 230, 255, 35%),
-			transparent 70%
-		);
-		opacity: 0;
-		transition: opacity 0.25s ease;
-	}
-	[data-cursor-active='true'] .cold-light {
-		opacity: 1;
-	}
-
-	.hero-content {
+	.overlay {
 		position: relative;
 		z-index: 1;
-		max-width: 34em;
-		text-align: center;
-	}
-	.hero-content h1 {
-		font-size: 3.4em;
-		color: rgb(var(--black));
-		text-shadow: 0 0 24px rgba(127, 224, 255, 35%);
-	}
-	.hero-content p {
-		color: rgb(var(--gray-dark));
-		font-size: 1.1em;
-	}
-	.cta {
-		display: inline-block;
-		margin-top: 0.5em;
-		padding: 0.6em 1.6em;
-		border: 1px solid var(--accent);
-		border-radius: 999px;
-		color: var(--accent);
-		text-decoration: none;
-		transition:
-			background-color 0.2s ease,
-			color 0.2s ease;
-	}
-	.cta:hover {
-		background: var(--accent);
-		color: rgb(var(--bg));
+		display: flex;
+		flex-direction: column;
+		justify-content: space-between;
+		min-height: 100vh;
+		padding: 2rem clamp(1.2rem, 4vw, 3.5rem);
 	}
 
-	/* Mobile: hold the Lighthouse Performance >= 90 floor by trimming the
-	   most expensive layers (blur, the densest snow layer) rather than
-	   shrinking everything proportionally. */
+	nav {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		font-size: 0.85rem;
+		letter-spacing: 0.08em;
+	}
+	nav .logo {
+		font-weight: 600;
+		color: rgb(var(--black));
+		text-decoration: none;
+	}
+	nav .hint {
+		color: rgb(var(--gray));
+	}
+
+	.bottom-bar {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 1.5rem;
+		justify-content: space-between;
+		align-items: flex-end;
+	}
+
+	.headline {
+		max-width: 640px;
+	}
+	.eyebrow {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.6rem;
+		font-size: 0.76rem;
+		letter-spacing: 0.15em;
+		color: var(--accent);
+		margin-bottom: 1rem;
+	}
+	.eyebrow::before {
+		content: '';
+		width: 22px;
+		height: 1px;
+		background: var(--accent);
+	}
+	.headline h1 {
+		font-weight: 700;
+		font-size: clamp(1.7rem, 4.4vw, 3rem);
+		line-height: 1.4;
+		text-shadow: 0 2px 30px rgba(4, 7, 13, 80%);
+	}
+	.headline .sub {
+		margin-top: 0.9rem;
+		color: rgb(var(--gray-dark));
+		font-weight: 300;
+		font-size: 0.95rem;
+		max-width: 30em;
+		line-height: 1.7;
+		text-shadow: 0 2px 20px rgba(4, 7, 13, 80%);
+	}
+
+	.hero-actions {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-end;
+		gap: 1rem;
+	}
+
+	.floe {
+		cursor: pointer;
+		max-width: 380px;
+		padding: 1.4rem 1.6rem;
+		background: rgba(var(--black), 7%);
+		border: 1px solid rgba(var(--black), 16%);
+		backdrop-filter: blur(14px);
+		clip-path: polygon(0 8%, 92% 0, 100% 86%, 12% 100%, 0 60%);
+		text-decoration: none;
+		color: inherit;
+		transition:
+			transform 0.4s ease,
+			box-shadow 0.4s ease;
+	}
+	.floe:hover {
+		transform: translateY(-4px) rotate(-0.3deg);
+		box-shadow: 0 12px 40px rgba(62, 230, 196, 15%);
+	}
+	.floe .label {
+		font-size: 0.72rem;
+		letter-spacing: 0.12em;
+		color: var(--accent);
+		margin-bottom: 0.5rem;
+	}
+	.floe .title {
+		font-family: var(--font-noto-serif-tc);
+		font-size: 1.05rem;
+		line-height: 1.6;
+		color: rgb(var(--black));
+	}
+	.floe .hint {
+		margin-top: 0.7rem;
+		font-size: 0.74rem;
+		color: rgb(var(--gray));
+	}
+
+	.regen-btn {
+		font-family: var(--font-atkinson);
+		font-size: 0.82rem;
+		font-weight: 500;
+		letter-spacing: 0.03em;
+		color: rgb(var(--bg));
+		background: rgb(var(--black));
+		border: none;
+		padding: 0.75rem 1.4rem;
+		cursor: pointer;
+		clip-path: polygon(6% 0, 100% 0, 100% 78%, 94% 100%, 0 100%, 0 22%);
+		transition:
+			transform 0.3s ease,
+			box-shadow 0.3s ease;
+		box-shadow: 0 6px 24px rgba(62, 230, 196, 18%);
+	}
+	.regen-btn:hover {
+		transform: translateY(-2px);
+		box-shadow: 0 10px 32px rgba(62, 230, 196, 30%);
+	}
+
 	@media (max-width: 640px) {
-		.snow-layer--3 {
-			display: none;
+		.bottom-bar {
+			flex-direction: column;
+			align-items: stretch;
 		}
-		.glacier--far {
-			display: none;
+		.hero-actions {
+			align-items: stretch;
 		}
-		.aurora {
-			filter: blur(12px);
+		.floe {
+			max-width: none;
 		}
 	}
 </style>

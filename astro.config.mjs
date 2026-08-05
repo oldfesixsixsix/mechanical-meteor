@@ -31,5 +31,12 @@ export default defineConfig({
 				],
 			},
 		},
+		{
+			provider: fontProviders.google(),
+			name: 'Noto Serif TC',
+			cssVariable: '--font-noto-serif-tc',
+			fallbacks: ['serif'],
+			weights: [300, 400, 500, 600, 700],
+		},
 	],
 });

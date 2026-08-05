@@ -52,6 +52,9 @@ import SearchModal from './SearchModal.astro';
 		padding: 0 1em;
 		background: rgb(var(--surface));
 		box-shadow: 0 2px 8px rgba(var(--black), 5%);
+		/* UI chrome stays on the sans-serif face; Noto Serif TC (the site's new
+		   default body font) is reserved for headings and reading content. */
+		font-family: var(--font-atkinson);
 	}
 	h2 {
 		margin: 0;

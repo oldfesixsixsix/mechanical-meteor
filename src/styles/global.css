@@ -5,21 +5,23 @@
  */
 
 /*
-  Ice theme: a single, non-switchable, extreme-contrast palette (near-black
-  deep blue through near-blinding ice white). Body/paragraph text stays within
-  WCAG AA even though background/decoration push to the extremes.
+  Ice-3D / Frozen Lake theme: a single, non-switchable palette taken directly
+  from the confirmed prototypes (/demo/ice_terrain_3d.html,
+  /demo/hero_to_article_flow.html) — near-black background, teal + violet
+  accent pairing, pale ice-white headings, softer blue-gray body copy.
   See CONTEXT.md (Immersive Zone / Reading Zone) and
-  docs/adr/0002-single-theme-extreme-contrast-not-a-toggle.md.
+  docs/adr/0002-single-theme-extreme-contrast-not-a-toggle.md /
+  docs/adr/0003-scoped-webgl-exception-for-immersive-zone.md.
 */
 :root {
-	--accent: #7fe0ff;
-	--accent-dark: #3fa8d6;
-	--black: 244, 250, 255;
-	--gray: 150, 175, 204;
-	--gray-light: 22, 40, 68;
-	--gray-dark: 210, 224, 238;
-	--bg: 3, 6, 14;
-	--surface: 9, 16, 32;
+	--accent: #3ee6c4;
+	--accent-dark: #8a7cf0;
+	--black: 242, 251, 255;
+	--gray: 126, 168, 191;
+	--gray-light: 20, 35, 56;
+	--gray-dark: 220, 234, 242;
+	--bg: 4, 7, 13;
+	--surface: 10, 20, 32;
 	--gray-gradient: rgba(var(--gray-light), 35%), rgb(var(--bg));
 	--box-shadow:
 		0 2px 6px rgba(0, 0, 0, 45%), 0 8px 24px rgba(0, 0, 0, 55%),
@@ -27,7 +29,7 @@
 }
 
 body {
-	font-family: var(--font-atkinson);
+	font-family: var(--font-noto-serif-tc);
 	margin: 0;
 	padding: 0;
 	text-align: left;
@@ -117,11 +119,22 @@ pre {
 pre > code {
 	all: unset;
 }
+/* Pull-quote treatment, reused from /demo/hero_to_article_flow.html's
+   .pull-quote — applied to blockquote so existing Markdown/MDX content picks
+   it up without a new authoring convention. */
 blockquote {
-	border-left: 4px solid var(--accent);
-	padding: 0 0 0 20px;
-	margin: 0;
-	font-size: 1.333em;
+	margin: 1.6em 0;
+	padding: 1.1em 1.3em;
+	background: rgba(var(--black), 5%);
+	border: 1px solid rgba(var(--black), 12%);
+	backdrop-filter: blur(10px);
+	clip-path: polygon(0 6%, 95% 0, 100% 92%, 8% 100%, 0 70%);
+	font-size: 1.15em;
+	line-height: 1.85;
+	color: rgb(var(--black));
+}
+blockquote p:last-child {
+	margin-bottom: 0;
 }
 hr {
 	border: none;
@@ -155,35 +168,7 @@ hr {
 }
 
 /*
-  Threshold Transition: the View Transition that plays only when crossing the
-  Immersive Zone <-> Reading Zone boundary. Only the Immersive Zone page
-  (data-zone="immersive", i.e. the homepage) ever matches these selectors, on
-  either side of the swap:
-  - leaving the homepage matches [data-zone="immersive"]::view-transition-old(root)
-  - arriving at the homepage matches [data-zone="immersive"]::view-transition-new(root)
-  Reading Zone <-> Reading Zone navigation never matches either selector, so it
-  falls through to Astro's default fade untouched. prefers-reduced-motion is
-  handled automatically by Astro's ClientRouter (it disables all view transition
-  animation and swaps the DOM instantly), so no extra guard is needed here.
+  Threshold Transition is now JS-orchestrated (camera dive + a persisted
+  whiteout overlay + a real navigate() call — see index.astro and
+  ThresholdWhiteout.astro), not a CSS view-transition rule. See CONTEXT.md.
 */
-[data-zone='immersive']::view-transition-old(root) {
-	animation: threshold-shatter-out 0.6s cubic-bezier(0.4, 0, 0.2, 1) both;
-}
-
-[data-zone='immersive']::view-transition-new(root) {
-	animation: threshold-shatter-in 0.6s cubic-bezier(0.4, 0, 0.2, 1) both;
-}
-
-@keyframes threshold-shatter-out {
-	to {
-		clip-path: circle(0% at 50% 40%);
-		filter: brightness(1.6) saturate(0.6);
-	}
-}
-
-@keyframes threshold-shatter-in {
-	from {
-		clip-path: circle(0% at 50% 40%);
-		filter: brightness(1.6) saturate(0.6);
-	}
-}
