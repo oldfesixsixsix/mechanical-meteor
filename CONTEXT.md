@@ -17,6 +17,13 @@ Inherits the active theme's **palette** only. No looping, floating, or parallax
 animation; no decorative artwork (see *Decoration vs. Structural Styling* below
 for the one narrow exception). Optimized for long-form reading comfort, not
 spectacle.
+- **Ambient-drift exception**: one narrow, bounded exception to "no looping
+  animation" — a background drift effect is allowed if its full cycle duration
+  is > 30s **and** its positional/opacity amplitude is < 5%. Below both
+  thresholds it reads as atmosphere, not motion, to a reader. Above either
+  threshold, it's decoration and the normal "no looping animation" rule
+  applies. Introduced for the ice-3D theme's `.aurora-still`-style background;
+  any future use must be checked against these same numbers, not vibes.
 
 ### Decoration vs. Structural Styling
 A distinction inside the Reading Zone's "no decoration" rule. **Decoration** is
@@ -34,28 +41,86 @@ themed illustrative silhouette is decoration.
   animation on cards.
 
 ### Threshold Transition
-The custom View Transition that fires only on navigations crossing the
-Immersive Zone ↔ Reading Zone boundary (home → blog index/post, or back again).
-Implemented as a pure-CSS rule keyed off the page-root `data-zone` attribute
-matched against the View Transition API's `::view-transition-old(root)` /
-`::view-transition-new(root)` pseudo-elements — no per-navigation JS
-classification needed. All other navigation (Reading Zone ↔ Reading Zone, e.g.
-post → post, list → post) uses Astro's default `fade` so page-turning during
-reading stays unobtrusive.
+The custom transition that fires only on navigations crossing the Immersive
+Zone ↔ Reading Zone boundary (home → blog index/post, or back again). All
+other navigation (Reading Zone ↔ Reading Zone, e.g. post → post, list → post)
+uses Astro's default `fade` so page-turning during reading stays unobtrusive.
+**Redefined for the ice-3D theme** (previously a pure-CSS `data-zone`-keyed
+`::view-transition-old/new(root)` rule, no JS involved — that mechanism is
+retired along with the CSS-only Immersive Zone it belonged to): now a
+JS-orchestrated sequence — camera "dive" toward the ice, a whiteout overlay
+fading to full opacity, a real `navigate()` call fired at full whiteout, then
+the whiteout fades out on the destination page. The whiteout element uses
+`transition:persist` from a shared layout so it survives the real Astro page
+swap as one continuous element rather than two independently-timed ones.
 
-### CSS-only, with narrow input-reading exceptions
-The project's animation architecture is CSS-only: no third-party JS animation
-library (GSAP/anime.js/Framer Motion), because no UI framework is installed, so
-such a library would only ever run as a bare `<script>` with no island benefit.
-This does **not** ban all JavaScript outright — a minimal hand-written script is
-allowed strictly to read a signal CSS cannot access on its own (e.g. live cursor
-coordinates) and hand it to CSS as a custom property; the actual animation,
-timing, and visual computation must still live in CSS. The line: JS may *feed
-inputs to* CSS animation, it may never *be* the animation engine.
+### CSS-only, with a scoped Immersive Zone exception
+The site's **default** animation architecture is CSS-only: no third-party JS
+animation library, because no UI framework is installed, so such a library
+would only ever run as a bare `<script>` with no island benefit. A minimal
+hand-written script may still read a signal CSS cannot access (e.g. cursor
+coordinates) and hand it to CSS as a custom property — JS feeds inputs to CSS,
+it never becomes the animation engine. **This default still governs the
+Reading Zone and all site chrome.**
+- **Scoped exception**: the Immersive Zone (homepage hero) is a genuine
+  Three.js/WebGL 3D scene — a real JS rendering engine, not an input-feed. This
+  is deliberately narrow: vanilla script written directly in the homepage's own
+  `<script>` (no framework wrapper, no `client:*` directive — those only apply
+  to framework-component islands, which this project has none of), so Astro's
+  default per-page bundling already guarantees it. Reading Zone pages must
+  contain zero Three.js-related code in their bundles — this isn't a
+  convention to remember, it falls out of the file structure automatically as
+  long as the 3D code lives only in `index.astro`.
 
 ## Decisions Log
 
-### Visual theme: Ice / Winter (current, supersedes Jungle)
+### Visual theme: Ice-3D / Frozen Lake (current, supersedes CSS-only Ice)
+- The CSS-only ice theme (issue #2) is **retired, not carried forward as a
+  fallback**. The 3D scene is deliberately independent of it — no shared
+  palette, no shared assets, no reuse of its Immersive Zone markup. Its
+  decorative CSS/markup (glacier silhouettes, CSS snowfall, cursor-driven
+  cracks, the entrance-blur animation, the CSS `threshold-shatter-*`
+  keyframes) becomes dead code to remove during implementation.
+- **No-WebGL/no-JS/`prefers-reduced-motion` fallback**: a minimal static
+  background (near-black, headline text, no motion) — not the retired CSS ice
+  hero.
+- **Reading Zone visual identity also replaced**, site-wide (blog index, tag
+  pages, about page, individual posts — not just the post layout): Noto Serif
+  TC (loaded via Astro's `fontProviders.google()`, consistent with how
+  Atkinson is already loaded), teal/violet accents, the prototype's
+  crack-divider and pull-quote component styles. This supersedes the ice
+  theme's Reading Zone typography/palette (Atkinson, cyan accent) from
+  issue #2.
+- **3D scene architecture**: vanilla Three.js (no React/Vue wrapper, no
+  `client:*` directive — see the CSS-only glossary entry above). Package via
+  npm (`three`), bundled by Astro's existing Vite pipeline — not the
+  prototype's CDN script tag. Porting from the prototype's r128 APIs to
+  current Three.js is a mechanical rename only (`outputEncoding` →
+  `outputColorSpace`, `THREE.sRGBEncoding` → `THREE.SRGBColorSpace`,
+  `RGBFormat` → `RGBAFormat`), not a visual change — the terrain, sky shader,
+  lighting, camera orbit, and snow particle system are reused as designed in
+  the prototype.
+- **Script re-execution**: the homepage's 3D-scene `<script>` carries
+  `data-astro-rerun`, so returning to the homepage via real navigation
+  re-executes setup (Astro's bundled scripts otherwise run once per session).
+- **Resource disposal**: a cleanup routine (cancel the render loop, dispose
+  renderer/geometry/materials/textures/envMap, remove event listeners) runs on
+  `astro:before-swap` — the last moment the homepage's DOM is still present
+  before a real navigation away.
+- **Device capability**: reuses the same 640px viewport-width breakpoint
+  already established for the (now-retired) CSS hero's mobile simplification,
+  for consistency — not `hardwareConcurrency`/`deviceMemory` (inconsistent
+  browser support).
+- **Reading Zone ambient-drift exception**: see the Reading Zone glossary
+  entry's bounded exception (> 30s cycle, < 5% amplitude) — added specifically
+  to permit the prototype's `.aurora-still` background.
+- **New ADR needed**: this is a hard-to-reverse, surprising-without-context
+  architectural shift — the site's CSS-only default now has a real exception
+  (a WebGL rendering engine), which a future reader of the CSS-only glossary
+  entry would not expect. Author `docs/adr/0003-...` recording this when
+  implementation starts, alongside removal of the CSS-only ice hero.
+
+### Visual theme: Ice / Winter (superseded by Ice-3D above — kept for history)
 - The jungle theme (deep-green palette, vine/leaf artwork, "crossing into the
   jungle" Threshold Transition framing) is **abandoned**, not iterated on.
   `docs/adr/0001-remove-light-dark-toggle-for-jungle-theme.md` is retained only

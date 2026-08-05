@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mechanical Meteor — 3D Ice Terrain (Three.js)</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@300;400;600;700&family=Inter:wght@300;400;500;600&display=swap');
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body { height:100%; background:#04070d; overflow:hidden; }
+  body { font-family:'Inter',sans-serif; color:#f2fbff; }
+
+  #canvas-wrap { position:fixed; inset:0; }
+  canvas { display:block; }
+
+  .overlay {
+    position: fixed; inset: 0;
+    z-index: 5;
+    display: flex; flex-direction: column;
+    justify-content: space-between;
+    pointer-events: none;
+    padding: 2rem clamp(1.2rem, 4vw, 3.5rem);
+  }
+  nav { display:flex; justify-content:space-between; align-items:center; font-size:0.85rem; letter-spacing:0.08em; }
+  nav .logo { font-weight:600; }
+
+  .headline {
+    max-width: 640px;
+    pointer-events: none;
+  }
+  .eyebrow {
+    display:inline-flex; align-items:center; gap:0.6rem;
+    font-size:0.76rem; letter-spacing:0.15em; color:#3ee6c4;
+    margin-bottom: 1rem;
+  }
+  .eyebrow::before { content:''; width:22px; height:1px; background:#3ee6c4; }
+  h1 {
+    font-family:'Noto Serif TC', serif;
+    font-weight:700;
+    font-size: clamp(1.7rem, 4.4vw, 3rem);
+    line-height:1.4;
+    text-shadow: 0 2px 30px rgba(4,7,13,0.8);
+  }
+  .sub { margin-top:0.9rem; color:#a9d3e8; font-weight:300; font-size:0.95rem; max-width:30em; line-height:1.7;
+    text-shadow: 0 2px 20px rgba(4,7,13,0.8); }
+
+  .bottom-bar {
+    display:flex; justify-content:space-between; align-items:flex-end;
+    pointer-events:none;
+  }
+  .hint { font-size:0.75rem; color:#7ea8bf; letter-spacing:0.05em; }
+
+  .regen-btn {
+    pointer-events: auto;
+    font-family:'Inter',sans-serif;
+    font-size:0.82rem; font-weight:500; letter-spacing:0.03em;
+    color:#04070d;
+    background:#f2fbff;
+    border:none;
+    padding:0.75rem 1.4rem;
+    cursor:pointer;
+    clip-path: polygon(6% 0, 100% 0, 100% 78%, 94% 100%, 0 100%, 0 22%);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    box-shadow: 0 6px 24px rgba(62,230,196,0.18);
+  }
+  .regen-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 32px rgba(62,230,196,0.3); }
+
+  .loading {
+    position: fixed; inset:0; z-index: 10;
+    background:#04070d;
+    display:flex; align-items:center; justify-content:center;
+    font-size:0.85rem; letter-spacing:0.1em; color:#7ea8bf;
+    transition: opacity 0.6s ease;
+  }
+</style>
+</head>
+<body>
+
+<div class="loading" id="loading">正在生成冰原地形…</div>
+
+<div id="canvas-wrap"></div>
+
+<div class="overlay">
+  <nav>
+    <div class="logo">Mechanical Meteor</div>
+    <div class="hint">Three.js r128 · procedural terrain</div>
+  </nav>
+
+  <div></div>
+
+  <div class="bottom-bar">
+    <div class="headline">
+      <div class="eyebrow">如履薄冰 · ON THIN ICE</div>
+      <h1>我這一生如履薄冰，你說我能走到對岸嗎？</h1>
+      <p class="sub">拖曳可微調視角。地形由 Perlin noise 生成，材質使用 PBR transmission / roughness 模擬冰塊的透光與粗糙反射。</p>
+    </div>
+    <button class="regen-btn" id="regen">重新生成地形 ↻</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function () {
+  const wrap = document.getElementById('canvas-wrap');
+  const loading = document.getElementById('loading');
+
+  // ---------- Perlin 2D noise (seedable) ----------
+  function makePerlin(seed) {
+    const perm = new Uint8Array(256);
+    for (let i = 0; i < 256; i++) perm[i] = i;
+    let s = seed || 1;
+    function rand() { s = (s * 9301 + 49297) % 233280; return s / 233280; }
+    for (let i = 255; i > 0; i--) {
+      const j = Math.floor(rand() * (i + 1));
+      const t = perm[i]; perm[i] = perm[j]; perm[j] = t;
+    }
+    const p = new Uint8Array(512);
+    for (let i = 0; i < 512; i++) p[i] = perm[i & 255];
+    function fade(t) { return t * t * t * (t * (t * 6 - 15) + 10); }
+    function lerp(a, b, t) { return a + t * (b - a); }
+    function grad(hash, x, y) {
+      const h = hash & 7;
+      const u = h < 4 ? x : y, v = h < 4 ? y : x;
+      return ((h & 1) ? -u : u) + ((h & 2) ? -2 * v : 2 * v);
+    }
+    return function noise(x, y) {
+      const X = Math.floor(x) & 255, Y = Math.floor(y) & 255;
+      x -= Math.floor(x); y -= Math.floor(y);
+      const u = fade(x), v = fade(y);
+      const aa = p[p[X] + Y], ab = p[p[X] + Y + 1], ba = p[p[X + 1] + Y], bb = p[p[X + 1] + Y + 1];
+      return lerp(
+        lerp(grad(aa, x, y), grad(ba, x - 1, y), u),
+        lerp(grad(ab, x, y - 1), grad(bb, x - 1, y - 1), u),
+        v
+      );
+    };
+  }
+
+  // ---------- renderer / scene / camera ----------
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.15;
+  wrap.appendChild(renderer.domElement);
+
+  const scene = new THREE.Scene();
+  scene.fog = new THREE.FogExp2(0x0a1522, 0.032);
+
+  const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 200);
+  camera.position.set(0, 7, 15);
+
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+
+  // ---------- sky dome (aurora gradient shader) ----------
+  function makeSkyMesh() {
+    const geo = new THREE.SphereGeometry(80, 32, 32);
+    const mat = new THREE.ShaderMaterial({
+      uniforms: {
+        time: { value: 0 },
+        topColor: { value: new THREE.Color(0x142338) },
+        bottomColor: { value: new THREE.Color(0x04070d) },
+        auroraA: { value: new THREE.Color(0x3ee6c4) },
+        auroraB: { value: new THREE.Color(0x8a7cf0) }
+      },
+      vertexShader: `
+        varying vec3 vPos;
+        void main() {
+          vPos = position;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        varying vec3 vPos;
+        uniform float time;
+        uniform vec3 topColor, bottomColor, auroraA, auroraB;
+        void main() {
+          float h = normalize(vPos).y * 0.5 + 0.5;
+          vec3 base = mix(bottomColor, topColor, h);
+          float band = sin(vPos.x * 0.05 + time * 0.15) * 0.5 + 0.5;
+          band *= smoothstep(0.15, 0.75, h) * smoothstep(1.0, 0.6, h);
+          vec3 aurora = mix(auroraA, auroraB, sin(vPos.z * 0.04 + time * 0.1) * 0.5 + 0.5);
+          vec3 color = base + aurora * band * 0.35;
+          gl_FragColor = vec4(color, 1.0);
+        }
+      `,
+      side: THREE.BackSide
+    });
+    return new THREE.Mesh(geo, mat);
+  }
+
+  const skyMesh = makeSkyMesh();
+  scene.add(skyMesh);
+
+  // ---------- environment map (for PBR reflections/transmission) ----------
+  function buildEnvMap() {
+    const envScene = new THREE.Scene();
+    envScene.add(makeSkyMesh());
+    const dl = new THREE.DirectionalLight(0xcfe9f5, 1.4);
+    dl.position.set(6, 10, 4);
+    envScene.add(dl);
+    envScene.add(new THREE.AmbientLight(0x2a3f52, 0.7));
+
+    const cubeRT = new THREE.WebGLCubeRenderTarget(256, {
+      format: THREE.RGBFormat, generateMipmaps: true, minFilter: THREE.LinearMipmapLinearFilter
+    });
+    const cubeCam = new THREE.CubeCamera(0.1, 100, cubeRT);
+    envScene.add(cubeCam);
+    cubeCam.update(renderer, envScene);
+    return cubeRT.texture;
+  }
+  const envMap = buildEnvMap();
+  scene.environment = envMap;
+
+  // ---------- lights ----------
+  const dirLight = new THREE.DirectionalLight(0xdbeeff, 1.6);
+  dirLight.position.set(8, 14, 6);
+  scene.add(dirLight);
+
+  const ambient = new THREE.AmbientLight(0x233d52, 0.55);
+  scene.add(ambient);
+
+  const rim = new THREE.PointLight(0x3ee6c4, 1.4, 40);
+  rim.position.set(-10, 4, -8);
+  scene.add(rim);
+
+  const rim2 = new THREE.PointLight(0x8a7cf0, 1.0, 40);
+  rim2.position.set(10, 3, -10);
+  scene.add(rim2);
+
+  // ---------- procedural ice terrain ----------
+  const SIZE = 46, SEGMENTS = 130;
+  let terrainMesh = null;
+
+  function buildTerrain(seed) {
+    if (terrainMesh) {
+      scene.remove(terrainMesh);
+      terrainMesh.geometry.dispose();
+    }
+    const noise = makePerlin(seed);
+    const geo = new THREE.PlaneGeometry(SIZE, SIZE, SEGMENTS, SEGMENTS);
+    geo.rotateX(-Math.PI / 2);
+    const pos = geo.attributes.position;
+    const colors = new Float32Array(pos.count * 3);
+    const cA = new THREE.Color(0x0b2032); // deep crevice
+    const cB = new THREE.Color(0xeaf7ff); // frost highlight
+    const cTeal = new THREE.Color(0x3ee6c4);
+
+    for (let i = 0; i < pos.count; i++) {
+      const x = pos.getX(i), z = pos.getZ(i);
+      let h = 0, amp = 1, freq = 0.045, norm = 0;
+      for (let o = 0; o < 5; o++) {
+        h += noise(x * freq + seed, z * freq - seed) * amp;
+        norm += amp; amp *= 0.5; freq *= 2;
+      }
+      h /= norm;
+      const ridgeN = noise(x * 0.09 + seed * 2, z * 0.09 - seed * 2);
+      const ridge = Math.pow(1 - Math.abs(ridgeN), 4);
+      const height = h * 2.4 + ridge * 1.1;
+      pos.setY(i, height);
+
+      const t = THREE.MathUtils.clamp((height + 1.6) / 3.2, 0, 1);
+      const c = cA.clone().lerp(cB, t);
+      if (ridge > 0.5) c.lerp(cTeal, (ridge - 0.5) * 0.5);
+      colors[i * 3] = c.r; colors[i * 3 + 1] = c.g; colors[i * 3 + 2] = c.b;
+    }
+    geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    geo.computeVertexNormals();
+
+    const mat = new THREE.MeshPhysicalMaterial({
+      vertexColors: true,
+      roughness: 0.3,
+      metalness: 0.04,
+      transmission: 0.5,
+      thickness: 1.3,
+      ior: 1.31,
+      clearcoat: 0.6,
+      clearcoatRoughness: 0.18,
+      envMap: envMap,
+      envMapIntensity: 1.25,
+      side: THREE.DoubleSide
+    });
+
+    terrainMesh = new THREE.Mesh(geo, mat);
+    scene.add(terrainMesh);
+  }
+  buildTerrain(Math.random() * 1000);
+
+  // ---------- snow particle point cloud ----------
+  function makeSnowTexture() {
+    const c = document.createElement('canvas'); c.width = c.height = 64;
+    const ctx = c.getContext('2d');
+    const g = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+    g.addColorStop(0, 'rgba(255,255,255,1)');
+    g.addColorStop(0.4, 'rgba(255,255,255,0.7)');
+    g.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, 64, 64);
+    return new THREE.CanvasTexture(c);
+  }
+
+  const isMobile = window.innerWidth < 640;
+  const COUNT = isMobile ? 900 : 2200;
+  const snowGeo = new THREE.BufferGeometry();
+  const positions = new Float32Array(COUNT * 3);
+  const velocities = new Float32Array(COUNT);
+  const phases = new Float32Array(COUNT);
+
+  for (let i = 0; i < COUNT; i++) {
+    positions[i * 3] = (Math.random() - 0.5) * SIZE;
+    positions[i * 3 + 1] = Math.random() * 22;
+    positions[i * 3 + 2] = (Math.random() - 0.5) * SIZE;
+    velocities[i] = 0.4 + Math.random() * 0.9;
+    phases[i] = Math.random() * Math.PI * 2;
+  }
+  snowGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+  const snowMat = new THREE.PointsMaterial({
+    size: 0.16,
+    map: makeSnowTexture(),
+    transparent: true,
+    depthWrite: false,
+    sizeAttenuation: true,
+    opacity: 0.9,
+    color: 0xffffff
+  });
+  const snowPoints = new THREE.Points(snowGeo, snowMat);
+  scene.add(snowPoints);
+
+  // ---------- interaction: drag to orbit, no OrbitControls dependency ----------
+  let isDragging = false, lastX = 0, lastY = 0;
+  let theta = 0.5, phi = 1.15, radius = 15;
+
+  function updateCamera() {
+    camera.position.x = radius * Math.sin(phi) * Math.sin(theta);
+    camera.position.z = radius * Math.sin(phi) * Math.cos(theta);
+    camera.position.y = radius * Math.cos(phi) + 3;
+    camera.lookAt(0, 1, 0);
+  }
+  updateCamera();
+
+  renderer.domElement.style.pointerEvents = 'auto';
+  renderer.domElement.style.touchAction = 'none';
+  renderer.domElement.addEventListener('pointerdown', (e) => {
+    isDragging = true; lastX = e.clientX; lastY = e.clientY;
+  });
+  window.addEventListener('pointerup', () => { isDragging = false; });
+  window.addEventListener('pointermove', (e) => {
+    if (!isDragging) return;
+    const dx = e.clientX - lastX, dy = e.clientY - lastY;
+    lastX = e.clientX; lastY = e.clientY;
+    theta -= dx * 0.005;
+    phi = THREE.MathUtils.clamp(phi - dy * 0.005, 0.4, 1.5);
+    updateCamera();
+  });
+  renderer.domElement.addEventListener('wheel', (e) => {
+    radius = THREE.MathUtils.clamp(radius + e.deltaY * 0.01, 8, 28);
+    updateCamera();
+  }, { passive: true });
+
+  // gentle autorotation when idle
+  let idleTimer = 0;
+
+  // ---------- regenerate button ----------
+  document.getElementById('regen').addEventListener('click', () => {
+    buildTerrain(Math.random() * 1000);
+  });
+
+  // ---------- render loop ----------
+  const clock = new THREE.Clock();
+  function animate() {
+    requestAnimationFrame(animate);
+    const dt = clock.getDelta();
+    const elapsed = clock.getElapsedTime();
+
+    skyMesh.material.uniforms.time.value = elapsed;
+
+    const posAttr = snowGeo.attributes.position;
+    for (let i = 0; i < COUNT; i++) {
+      let y = posAttr.array[i * 3 + 1] - velocities[i] * dt * 1.4;
+      if (y < -1) y = 20 + Math.random() * 2;
+      posAttr.array[i * 3 + 1] = y;
+      posAttr.array[i * 3] += Math.sin(elapsed * 0.5 + phases[i]) * 0.003;
+    }
+    posAttr.needsUpdate = true;
+
+    if (!isDragging) {
+      idleTimer += dt;
+      theta += dt * 0.02;
+      updateCamera();
+    }
+
+    rim.position.x = Math.sin(elapsed * 0.2) * 10;
+    rim2.position.x = Math.cos(elapsed * 0.17) * 10;
+
+    renderer.render(scene, camera);
+  }
+  animate();
+
+  loading.style.opacity = '0';
+  setTimeout(() => { loading.style.display = 'none'; }, 600);
+})();
+</script>
+
+</body>
+</html>
