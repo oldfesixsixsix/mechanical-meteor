@@ -10,40 +10,277 @@ import { SITE_DESCRIPTION, SITE_TITLE } from '../consts';
 	<head>
 		<BaseHead title={SITE_TITLE} description={SITE_DESCRIPTION} />
 	</head>
-	<body>
+	<body data-zone="immersive">
 		<Header />
-		<main>
-			<h1>🧑‍🚀 Hello, Astronaut!</h1>
-			<p>
-				Welcome to the official <a href="https://astro.build/">Astro</a> blog starter template. This template
-				serves as a lightweight, minimally-styled starting point for anyone looking to build a personal
-				website, blog, or portfolio with Astro.
-			</p>
-			<p>
-				This template comes with a few integrations already configured in your
-				<code>astro.config.mjs</code> file. You can customize your setup with
-				<a href="https://astro.build/integrations">Astro Integrations</a> to add tools like Tailwind,
-				React, or Vue to your project.
-			</p>
-			<p>Here are a few ideas on how to get started with the template:</p>
-			<ul>
-				<li>Edit this page in <code>src/pages/index.astro</code></li>
-				<li>Edit the site header items in <code>src/components/Header.astro</code></li>
-				<li>Add your name to the footer in <code>src/components/Footer.astro</code></li>
-				<li>Check out the included blog posts in <code>src/content/blog/</code></li>
-				<li>Customize the blog post page layout in <code>src/layouts/BlogPost.astro</code></li>
-			</ul>
-			<p>
-				Have fun! If you get stuck, remember to
-				<a href="https://docs.astro.build/">read the docs</a>
-				or <a href="https://astro.build/chat">join us on Discord</a> to ask questions.
-			</p>
-			<p>
-				Looking for a blog template with a bit more personality? Check out
-				<a href="https://github.com/Charca/astro-blog-template">astro-blog-template</a>
-				by <a href="https://twitter.com/Charca">Maxi Ferreira</a>.
-			</p>
+		<main class="jungle-hero">
+			<div class="canopy" aria-hidden="true">
+				<div class="light-pool light-pool--one"></div>
+				<div class="light-pool light-pool--two"></div>
+
+				<svg class="vine vine--left" viewBox="0 0 160 640" preserveAspectRatio="none">
+					<path
+						d="M40 0 C 10 80, 90 140, 50 220 S 0 340, 60 400 S 120 520, 40 640"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="10"
+						stroke-linecap="round"
+					></path>
+					<path d="M40 90 C 70 90, 90 70, 95 45" fill="none" stroke="currentColor" stroke-width="6"
+					></path>
+					<path
+						d="M55 260 C 25 260, 5 240, 0 210"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="6"
+					></path>
+					<path
+						d="M62 460 C 92 460, 112 440, 118 410"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="6"
+					></path>
+				</svg>
+
+				<svg class="vine vine--right" viewBox="0 0 160 640" preserveAspectRatio="none">
+					<path
+						d="M120 0 C 150 90, 70 150, 110 240 S 160 350, 100 420 S 40 540, 120 640"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="10"
+						stroke-linecap="round"
+					></path>
+					<path d="M112 130 C 82 130, 62 110, 56 85" fill="none" stroke="currentColor" stroke-width="6"
+					></path>
+					<path
+						d="M105 380 C 135 380, 155 360, 160 330"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="6"
+					></path>
+				</svg>
+
+				<svg class="leaf leaf--a" viewBox="0 0 80 48">
+					<path
+						d="M2 24 C 20 -8, 60 -8, 78 24 C 60 56, 20 56, 2 24 Z"
+						fill="currentColor"
+					></path>
+				</svg>
+				<svg class="leaf leaf--b" viewBox="0 0 80 48">
+					<path
+						d="M2 24 C 20 -8, 60 -8, 78 24 C 60 56, 20 56, 2 24 Z"
+						fill="currentColor"
+					></path>
+				</svg>
+				<svg class="leaf leaf--c" viewBox="0 0 80 48">
+					<path
+						d="M2 24 C 20 -8, 60 -8, 78 24 C 60 56, 20 56, 2 24 Z"
+						fill="currentColor"
+					></path>
+				</svg>
+			</div>
+
+			<div class="hero-content">
+				<h1>{SITE_TITLE}</h1>
+				<p>{SITE_DESCRIPTION}</p>
+				<a class="cta" href="/blog">走進文章</a>
+			</div>
 		</main>
 		<Footer />
 	</body>
 </html>
+
+<style>
+	.jungle-hero {
+		position: relative;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 100%;
+		max-width: 100%;
+		min-height: min(88vh, 760px);
+		margin: 0;
+		padding: 3em 1em;
+		overflow: hidden;
+		background:
+			radial-gradient(ellipse 70% 55% at 50% 20%, rgba(var(--gray-light), 55%), transparent 70%),
+			linear-gradient(180deg, rgb(var(--surface)) 0%, rgb(var(--bg)) 100%);
+		isolation: isolate;
+	}
+
+	.canopy {
+		position: absolute;
+		inset: 0;
+		z-index: 0;
+		pointer-events: none;
+		overflow: hidden;
+	}
+
+	.light-pool {
+		position: absolute;
+		width: 42vmin;
+		height: 42vmin;
+		border-radius: 50%;
+		background: radial-gradient(circle, rgba(217, 169, 76, 22%) 0%, transparent 70%);
+		filter: blur(28px);
+	}
+	.light-pool--one {
+		top: -8%;
+		left: 12%;
+	}
+	.light-pool--two {
+		bottom: -12%;
+		right: 8%;
+		width: 34vmin;
+		height: 34vmin;
+	}
+
+	.vine {
+		position: absolute;
+		top: 0;
+		height: 100%;
+		width: auto;
+		color: rgba(var(--gray-light), 90%);
+	}
+	.vine--left {
+		left: -1.5em;
+	}
+	.vine--right {
+		right: -1.5em;
+	}
+
+	.leaf {
+		position: absolute;
+		width: clamp(2.5em, 6vw, 4.5em);
+		height: auto;
+		color: rgba(var(--gray-light), 85%);
+	}
+	.leaf--a {
+		top: 12%;
+		left: 22%;
+	}
+	.leaf--b {
+		top: 65%;
+		right: 20%;
+	}
+	.leaf--c {
+		top: 38%;
+		right: 32%;
+		width: clamp(1.8em, 4vw, 3em);
+	}
+
+	.hero-content {
+		position: relative;
+		z-index: 1;
+		max-width: 34em;
+		text-align: center;
+	}
+	.hero-content h1 {
+		font-size: 3.4em;
+		color: rgb(var(--black));
+	}
+	.hero-content p {
+		color: rgb(var(--gray-dark));
+		font-size: 1.1em;
+	}
+	.cta {
+		display: inline-block;
+		margin-top: 0.5em;
+		padding: 0.6em 1.6em;
+		border: 1px solid var(--accent);
+		border-radius: 999px;
+		color: var(--accent);
+		text-decoration: none;
+		transition:
+			background-color 0.2s ease,
+			color 0.2s ease;
+	}
+	.cta:hover {
+		background: var(--accent);
+		color: rgb(var(--bg));
+	}
+
+	/* Motion: floating leaves/vines and pulsing light pools. Only runs when the
+	   visitor hasn't asked to reduce motion — the static artwork above stays
+	   fully visible either way, only the animation is gated. */
+	@media (prefers-reduced-motion: no-preference) {
+		.light-pool {
+			animation: light-pulse 9s ease-in-out infinite;
+		}
+		.light-pool--two {
+			animation-delay: -4s;
+		}
+		.leaf {
+			animation: leaf-float 7s ease-in-out infinite;
+		}
+		.leaf--b {
+			animation-duration: 8.5s;
+			animation-delay: -2s;
+		}
+		.leaf--c {
+			animation-duration: 6s;
+			animation-delay: -4.5s;
+		}
+		.vine {
+			animation: vine-sway 12s ease-in-out infinite;
+			transform-origin: top center;
+		}
+		.vine--right {
+			animation-duration: 14s;
+			animation-delay: -6s;
+		}
+
+		@supports (animation-timeline: scroll()) {
+			.vine,
+			.light-pool {
+				animation-timeline: scroll(root);
+				animation-range: entry 0% cover 60%;
+			}
+		}
+	}
+
+	@keyframes light-pulse {
+		0%,
+		100% {
+			opacity: 0.6;
+			transform: scale(1);
+		}
+		50% {
+			opacity: 1;
+			transform: scale(1.08);
+		}
+	}
+
+	@keyframes leaf-float {
+		0%,
+		100% {
+			transform: translateY(0) rotate(0deg);
+		}
+		50% {
+			transform: translateY(-14px) rotate(-4deg);
+		}
+	}
+
+	@keyframes vine-sway {
+		0%,
+		100% {
+			transform: translateY(0);
+		}
+		50% {
+			transform: translateY(10px);
+		}
+	}
+
+	/* Mobile: hold the Lighthouse Performance >= 90 floor by trimming the
+	   most expensive layers (blur, extra leaves) rather than shrinking them. */
+	@media (max-width: 640px) {
+		.light-pool--two {
+			display: none;
+		}
+		.leaf--c {
+			display: none;
+		}
+		.vine {
+			opacity: 0.6;
+		}
+	}
+</style>
