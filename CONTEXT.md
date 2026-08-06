@@ -85,6 +85,33 @@ navigation:
   About from any depth plays a single slide straight to that tab's canonical
   direction, never routed back through Home first.
 
+### Utility Page
+A page that renders inside the *Continuous World* (same 3D background, same
+Nav) but is not a "room" in the Directional Transition's spatial model — it
+has no canonical up/down/left/right slide direction of its own, and entering
+or leaving it plays Astro's plain default fade instead. Introduced for
+`/settings`, which needed to look like it belongs to the same world (visual
+consistency was a deliberate ask) but had no cardinal direction left to claim
+(up/down/left already belong to Home/Blog/About; right already means
+*Directional Transition*'s content-depth). A link into a Utility Page simply
+omits `data-nav-direction`, so `DirectionalTransition.astro`'s click delegate
+ignores it and lets Astro's built-in transition handle it. Any future
+non-content page (a privacy page, a colophon, etc.) that doesn't fit the
+content-depth-or-nav-tab shape should be considered a Utility Page rather than
+forcing a new direction into the model.
+
+### Ambient Soundtrack
+Sitewide background music, played through one `<audio>` element marked
+`transition:persist` so playback survives every real navigation without
+restarting — unlike the *Continuous World*'s 3D scenes, which deliberately
+*don't* persist a single instance (see the Decisions Log's fake-continuity
+rationale) because a re-initialized visual scene is imperceptible but a
+restarted audio track is jarring. Defaults to on for every visitor, but
+actual playback only starts on the first user gesture anywhere on the site
+(browser autoplay policy) and the on/off choice thereafter is remembered in
+`localStorage`. Controlled from the `/settings` *Utility Page*, not a
+persistent on-page toggle.
+
 ### CSS-only, with a scoped Immersive Zone exception (retired)
 **Retired by the Site-wide Continuous World decision** — kept only as a
 historical record. Previously: CSS-only was the site's default animation
@@ -99,6 +126,42 @@ installed, so a third-party animation library would only ever run as a bare
 directive, just no longer confined to one file.
 
 ## Decisions Log
+
+### Ambient Soundtrack + a Settings Utility Page (current)
+- **Feature**: sitewide background music (an MP3 the site owner personally
+  likes — a commercial game track, not original/licensed content; a knowingly
+  accepted personal-site risk, not something resolved here). Plays
+  continuously across navigation, on by default for every visitor, loops at
+  the end.
+- **Why the 3D scenes' "fake continuity" trick doesn't work here**: the
+  *Continuous World*'s per-page Three.js instances re-initialize on every
+  navigation and rely on a fixed seed/palette to look unbroken — acceptable
+  because a viewer can't perceive "the terrain regenerated," only that it
+  looks the same. A restarted audio track from 0:00 on every page is
+  immediately, jarringly perceptible in a way a re-initialized visual scene
+  isn't. So the *Ambient Soundtrack* uses real persistence — one `<audio>`
+  element marked `transition:persist` — rather than the 3D scenes' pattern.
+  Two different continuity problems, two different solutions; this doesn't
+  reopen ADR-0004's reasoning for the 3D scenes, which still holds.
+- **Autoplay**: browsers block audio-with-sound before a user gesture, so
+  "on by default" only actually starts sound on the visitor's first
+  click/keypress anywhere on the site, not on page load. The on/off
+  preference persists in `localStorage` afterward.
+- **New page, new category**: control lives on a new `/settings` page rather
+  than a floating always-visible toggle or a fourth Home/Blog/About tab — the
+  site owner wants a durable home for future settings too, not just this one.
+  `/settings` renders the same 3D background and Nav as every other page
+  (visual consistency was explicit), but has no free cardinal direction to
+  claim in *Directional Transition*'s model (up/down/left already belong to
+  Home/Blog/About, right already means content-depth) and reusing "right" for
+  a non-content page was explicitly rejected as confusing. This is the first
+  *Utility Page* (see Glossary) — a carve-out from the previously-unqualified
+  assumption that every page is a directional-model room.
+- **Entry point**: `Nav.astro` (currently just three text links, no logo, no
+  bar background — see the most recent nav redesign) gets one small icon-only
+  link to `/settings`, not a fourth text tab, to protect that redesign's
+  minimalism.
+- **New ADR**: see `docs/adr/0005-ambient-soundtrack-and-utility-pages.md`.
 
 ### Site-wide continuous 3D world (current, supersedes the Immersive/Reading Zone split)
 - **Scope**: every page — home, blog index, blog post, tag-filtered list,

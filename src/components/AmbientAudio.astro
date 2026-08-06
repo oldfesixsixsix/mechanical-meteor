@@ -1,0 +1,69 @@
+---
+// The Ambient Soundtrack (see CONTEXT.md): one <audio> element marked
+// transition:persist so the same DOM node — and its playback position —
+// survives every real navigation, unlike the Continuous World's 3D scenes,
+// which deliberately reinitialize per page (see docs/adr/0005-...). Rendered
+// on every page, including the /settings Utility Page, which reads/writes
+// the same element and localStorage key via window.__mmSetMusicEnabled.
+---
+
+<audio id="ambient-audio" transition:persist loop preload="none" src="/audio/frost-walrus-stage.mp3">
+</audio>
+
+<script>
+	const STORAGE_KEY = 'mm:music-enabled';
+
+	function isEnabled(): boolean {
+		const stored = localStorage.getItem(STORAGE_KEY);
+		// Unset means "never chosen yet" — defaults to on (see CONTEXT.md).
+		return stored === null ? true : stored === 'true';
+	}
+
+	function setEnabled(enabled: boolean) {
+		localStorage.setItem(STORAGE_KEY, String(enabled));
+	}
+
+	function getAudio(): HTMLAudioElement | null {
+		return document.getElementById('ambient-audio') as HTMLAudioElement | null;
+	}
+
+	// Safe to call anytime: browsers silently reject play() before a user
+	// gesture has occurred anywhere on the page, so this just no-ops until
+	// the first click/keydown below (or succeeds immediately on later
+	// navigations, once that gesture has already happened this session).
+	function tryPlay() {
+		const audio = getAudio();
+		if (!audio || !isEnabled()) return;
+		audio.play().catch(() => {
+			// Autoplay blocked — the first-gesture listener will retry.
+		});
+	}
+
+	function onFirstGesture() {
+		tryPlay();
+		document.removeEventListener('click', onFirstGesture);
+		document.removeEventListener('keydown', onFirstGesture);
+	}
+
+	(window as any).__mmSetMusicEnabled = function (enabled: boolean) {
+		setEnabled(enabled);
+		const audio = getAudio();
+		if (!audio) return;
+		if (enabled) {
+			audio.play().catch(() => {});
+		} else {
+			audio.pause();
+		}
+	};
+	(window as any).__mmIsMusicEnabled = isEnabled;
+
+	// This setup (event listeners) only needs to happen once for the whole
+	// session — the persisted <audio> element means there's nothing to
+	// re-initialize per page, unlike the 3D scenes' data-astro-rerun pattern.
+	if (!(window as any).__mmAudioInitialized) {
+		(window as any).__mmAudioInitialized = true;
+		document.addEventListener('astro:page-load', tryPlay);
+		document.addEventListener('click', onFirstGesture);
+		document.addEventListener('keydown', onFirstGesture);
+	}
+</script>

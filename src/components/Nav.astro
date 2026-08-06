@@ -7,16 +7,30 @@
 // clicking any tab from any depth always plays one direct slide to that
 // direction, never a multi-step reverse of however the current page was
 // reached.
+//
+// The trailing settings icon deliberately carries no data-nav-direction —
+// /settings is a Utility Page (see CONTEXT.md), entered with Astro's plain
+// default fade instead of a directional slide, so this link is left as a
+// normal <a> for the click delegate to ignore.
 const path = Astro.url.pathname;
 const isHome = path === '/';
 const isBlog = path.startsWith('/blog') || path.startsWith('/tags');
 const isAbout = path.startsWith('/about');
+const isSettings = path.startsWith('/settings');
 ---
 
 <nav class="mm-nav">
 	<a href="/" data-nav-direction="up" aria-current={isHome ? 'page' : undefined}>Home</a>
 	<a href="/blog" data-nav-direction="down" aria-current={isBlog ? 'page' : undefined}>Blog</a>
 	<a href="/about" data-nav-direction="left" aria-current={isAbout ? 'page' : undefined}>About</a>
+	<a href="/settings" class="mm-nav-icon" aria-current={isSettings ? 'page' : undefined} aria-label="設定">
+		<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8">
+			<circle cx="12" cy="12" r="3.2"></circle>
+			<path
+				d="M19.4 13.5a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.04 1.56V19.5a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1.04-1.56 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.56-1.04H4.5a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.56-1.04 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H10.6a1.7 1.7 0 0 0 1.04-1.56V4.5a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1.04 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87V10.6a1.7 1.7 0 0 0 1.56 1.04H19.5a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.56 1.04Z"
+			></path>
+		</svg>
+	</a>
 </nav>
 
 <style>
@@ -24,6 +38,7 @@ const isAbout = path.startsWith('/about');
 		position: relative;
 		z-index: 5;
 		display: flex;
+		align-items: center;
 		justify-content: flex-end;
 		gap: 2rem;
 		padding: 1.8rem clamp(1.2rem, 5vw, 4rem);
@@ -41,5 +56,9 @@ const isAbout = path.startsWith('/about');
 	.mm-nav a[aria-current='page'] {
 		opacity: 1;
 		color: var(--accent);
+	}
+	.mm-nav-icon {
+		display: flex;
+		filter: drop-shadow(0 2px 10px rgba(4, 7, 13, 80%));
 	}
 </style>

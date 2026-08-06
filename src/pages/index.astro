@@ -1,6 +1,7 @@
 ---
 import { getCollection } from 'astro:content';
 import BaseHead from '../components/BaseHead.astro';
+import AmbientAudio from '../components/AmbientAudio.astro';
 import DirectionalTransition from '../components/DirectionalTransition.astro';
 import Nav from '../components/Nav.astro';
 import { SITE_DESCRIPTION, SITE_TITLE } from '../consts';
@@ -21,6 +22,7 @@ const latestPost = posts[0];
 	</head>
 	<body>
 		<DirectionalTransition />
+		<AmbientAudio />
 		<div id="world">
 			<!--
 			  The canvas sits fixed behind the whole page — including the nav — so
@@ -43,7 +45,7 @@ const latestPost = posts[0];
 							<div class="eyebrow">哎呦，這不薄冰哥嗎 · ON THIN ICE</div>
 							<h1>{SITE_TITLE}</h1>
 							<p class="sub">{SITE_DESCRIPTION}</p>
-							<p class="drag-hint">拖曳可轉動視角</p>
+							<p class="drag-hint">拖曳不可轉動視角</p>
 						</div>
 
 						<div class="hero-actions">
