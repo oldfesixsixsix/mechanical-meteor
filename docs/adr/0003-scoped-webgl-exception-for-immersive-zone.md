@@ -1,5 +1,10 @@
 # Immersive Zone gets a scoped exception to the CSS-only default
 
+*Status: superseded by [ADR-0004](0004-site-wide-continuous-world.md) — the
+"deliberately narrow, homepage-only" premise below no longer holds. Kept as a
+historical record of why Three.js needed an exception to CSS-only at all,
+which ADR-0004 does not revisit.*
+
 The site's animation architecture defaults to CSS-only, specifically because no
 UI framework is installed and a third-party JS animation library would only
 ever run as a bare `<script>` with no island benefit. The homepage hero is now

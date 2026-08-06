@@ -2,77 +2,142 @@
 
 ## Glossary
 
-### Immersive Zone
-The homepage hero section. The site's full visual theme applies here at maximum
-intensity — this is the only zone where continuous/looping animation and a
-dominant, high-motion-budget entrance moment are permitted. Theme-neutral term:
-what specific artwork/effects populate it changes with the active visual theme
-(see Decisions Log for the current one), but the zone boundary and its rules do
-not.
+### Immersive Zone (retired)
+**Retired by the Site-wide Continuous World decision below** — kept only as a
+historical record of the zone boundary that existed before every page shared
+one 3D world. Previously: the homepage hero section, the only zone where
+continuous/looping animation was permitted. There is no zone boundary left;
+see *Continuous World*.
 
-### Reading Zone
-Everything else — blog index, tag pages, individual post pages (`BlogPost`
-layout), about page — plus the site-wide Header and Footer wherever they render.
-Inherits the active theme's **palette** only. No looping, floating, or parallax
-animation; no decorative artwork (see *Decoration vs. Structural Styling* below
-for the one narrow exception). Optimized for long-form reading comfort, not
-spectacle.
-- **Ambient-drift exception**: one narrow, bounded exception to "no looping
-  animation" — a background drift effect is allowed if its full cycle duration
-  is > 30s **and** its positional/opacity amplitude is < 5%. Below both
-  thresholds it reads as atmosphere, not motion, to a reader. Above either
-  threshold, it's decoration and the normal "no looping animation" rule
-  applies. Introduced for the ice-3D theme's `.aurora-still`-style background;
-  any future use must be checked against these same numbers, not vibes.
+### Reading Zone (retired)
+**Retired by the Site-wide Continuous World decision below** — kept only as a
+historical record. Previously: everything except the homepage (blog index,
+tag pages, individual post pages, about page), restricted to the theme's
+palette only, no looping animation, no decorative artwork. Its readability
+concerns didn't disappear — see *Reading Card* — but the zone boundary itself
+is gone; every page now carries the same 3D scene.
+
+### Continuous World
+The site-wide spatial metaphor that replaced the Immersive/Reading Zone split:
+every page (home, blog index, post, tag list, about) renders as if it's the
+same frozen lake, viewed from a different camera position. Implemented as
+independent per-page Three.js instances (not one persisted renderer — see the
+Decisions Log entry below for why), kept visually continuous by sharing a
+fixed Perlin seed, palette, and terrain parameters across pages via a common
+utility module. Moving between pages plays a *Directional Transition* rather
+than a hard cut, reinforcing the illusion of one contiguous place.
+
+### Reading Card
+The near-opaque panel that long-form body text (blog post body, About page
+body) is contained in, so paragraph text stays legible over the
+now-permanently-animated *Continuous World* background. The 3D scene stays
+visible at the card's edges and during page entry, never directly behind body
+copy. Successor to the Reading Zone's "no decorative artwork behind text"
+concern, scoped down to the card rather than the whole page.
+
+### Floe Card
+The pure-text card design for blog-index and tag-filtered-list entries:
+category label (the post's first tag), title, excerpt (the content
+collection's `description` field), and date — no hero image, no reading-time
+figure. Named for the demo's `.floe` class. Uses the same irregular
+`clip-path` edge as *Decoration vs. Structural Styling* below.
 
 ### Decoration vs. Structural Styling
-A distinction inside the Reading Zone's "no decoration" rule. **Decoration** is
-anything whose job is atmosphere/spectacle — animated elements, illustrative
-artwork, motifs that exist to build a mood (forbidden in the Reading Zone).
-**Structural styling** is a shape/layout choice applied to a real UI element
-that would need *some* border treatment regardless of theme (forbidden nothing —
-allowed in the Reading Zone). The test: would this still be here, in some form,
-under a completely different visual theme? A `border-radius` is structural; a
-themed illustrative silhouette is decoration.
-- **Ruling (ice theme)**: blog-index article cards using an irregular/fractured
-  `clip-path` edge instead of `border-radius` counts as structural styling (it's
-  still "the card's edge shape," just a different shape) — allowed in the
-  Reading Zone as a named exception. It must stay static; no crack-growth
-  animation on cards.
+Originally a distinction inside the (now-retired) Reading Zone's "no
+decoration" rule; the ruling below still governs card styling site-wide even
+though the zone it was scoped to is gone. **Decoration** is anything whose job
+is atmosphere/spectacle — animated elements, illustrative artwork, motifs that
+exist to build a mood. **Structural styling** is a shape/layout choice applied
+to a real UI element that would need *some* border treatment regardless of
+theme. The test: would this still be here, in some form, under a completely
+different visual theme? A `border-radius` is structural; a themed illustrative
+silhouette is decoration.
+- **Ruling (ice theme)**: *Floe Card* entries using an irregular/fractured
+  `clip-path` edge instead of `border-radius` counts as structural styling
+  (it's still "the card's edge shape," just a different shape). It must stay
+  static; no crack-growth animation on cards.
 
-### Threshold Transition
-The custom transition that fires only on navigations crossing the Immersive
-Zone ↔ Reading Zone boundary (home → blog index/post, or back again). All
-other navigation (Reading Zone ↔ Reading Zone, e.g. post → post, list → post)
-uses Astro's default `fade` so page-turning during reading stays unobtrusive.
-**Redefined for the ice-3D theme** (previously a pure-CSS `data-zone`-keyed
-`::view-transition-old/new(root)` rule, no JS involved — that mechanism is
-retired along with the CSS-only Immersive Zone it belonged to): now a
-JS-orchestrated sequence — camera "dive" toward the ice, a whiteout overlay
-fading to full opacity, a real `navigate()` call fired at full whiteout, then
-the whiteout fades out on the destination page. The whiteout element uses
-`transition:persist` from a shared layout so it survives the real Astro page
-swap as one continuous element rather than two independently-timed ones.
+### Threshold Transition (retired)
+**Retired by Directional Transition below** — kept only as a historical
+record. Previously: the transition that fired on navigations crossing the
+Immersive Zone ↔ Reading Zone boundary — a JS-orchestrated camera "dive"
+toward the ice, a whiteout overlay fading to full opacity, a real `navigate()`
+call fired at full whiteout, then the whiteout fading out on arrival. There is
+no zone boundary left to fire it at.
 
-### CSS-only, with a scoped Immersive Zone exception
-The site's **default** animation architecture is CSS-only: no third-party JS
-animation library, because no UI framework is installed, so such a library
-would only ever run as a bare `<script>` with no island benefit. A minimal
-hand-written script may still read a signal CSS cannot access (e.g. cursor
-coordinates) and hand it to CSS as a custom property — JS feeds inputs to CSS,
-it never becomes the animation engine. **This default still governs the
-Reading Zone and all site chrome.**
-- **Scoped exception**: the Immersive Zone (homepage hero) is a genuine
-  Three.js/WebGL 3D scene — a real JS rendering engine, not an input-feed. This
-  is deliberately narrow: vanilla script written directly in the homepage's own
-  `<script>` (no framework wrapper, no `client:*` directive — those only apply
-  to framework-component islands, which this project has none of), so Astro's
-  default per-page bundling already guarantees it. Reading Zone pages must
-  contain zero Three.js-related code in their bundles — this isn't a
-  convention to remember, it falls out of the file structure automatically as
-  long as the 3D code lives only in `index.astro`.
+### Directional Transition
+The transition that replaced Threshold Transition once the whole site became
+one *Continuous World*: the viewport slides in a fixed direction (down,
+right, up, or left) between pages, standing in for movement through one
+contiguous space rather than a hard cut. Two rules fix the direction for any
+navigation:
+- **Content depth** moves right: blog index → post, and post → a
+  tag-filtered list (clicking one of the post's tags) both slide right — each
+  is "going deeper into content," so they share a direction.
+- **Nav-tab clicks are always one direct slide to that tab's canonical
+  direction from Home, never a multi-step reverse of however the current page
+  was reached.** Home's canonical direction is down (Home → blog index);
+  About's is left (Home → About). Clicking Home from any depth (a post, a
+  tag list, About) plays a single "up" slide straight back; clicking Blog or
+  About from any depth plays a single slide straight to that tab's canonical
+  direction, never routed back through Home first.
+
+### CSS-only, with a scoped Immersive Zone exception (retired)
+**Retired by the Site-wide Continuous World decision** — kept only as a
+historical record. Previously: CSS-only was the site's default animation
+architecture, with Three.js/WebGL scoped narrowly to the homepage alone, and
+every other page's bundle guaranteed free of it by file structure. Three.js is
+now the site-wide default background layer (see *Continuous World*); the
+guarantee this entry described no longer holds anywhere. The underlying
+reason a JS rendering engine needed an exception at all — no UI framework is
+installed, so a third-party animation library would only ever run as a bare
+`<script>` with no island benefit — still holds and isn't being revisited: the
+3D code is still vanilla script with no framework wrapper and no `client:*`
+directive, just no longer confined to one file.
 
 ## Decisions Log
+
+### Site-wide continuous 3D world (current, supersedes the Immersive/Reading Zone split)
+- **Scope**: every page — home, blog index, blog post, tag-filtered list,
+  about — now renders the *Continuous World* (see Glossary), not just the
+  homepage hero. Retires the Immersive/Reading Zone split, the CSS-only
+  default's homepage-only exception, and Threshold Transition (all marked
+  retired in the Glossary above) in one move — see
+  `docs/adr/0004-site-wide-continuous-world.md` for the full rationale.
+- **Independent per-page instances, not one persisted renderer**: each page
+  owns its own Three.js instance with its own init/dispose lifecycle — the
+  same per-page pattern established below for the homepage — rather than one
+  shared renderer/canvas kept alive across real navigations via
+  `transition:persist`. Chosen deliberately over true persistence: a shared
+  instance's lifecycle bookkeeping (object ownership, camera position at
+  arbitrary route depth, dispose correctness) gets harder to reason about as
+  more pages are added, and locks every future page into extending one shared
+  scene graph. Independent instances stay additive — a new page is a
+  self-contained scene module, free to look completely different, with zero
+  risk to any other page.
+- **Shared utility module**: the Perlin noise / terrain-generation / sky-shader
+  / snow-particle logic is factored into one plain utility module (no
+  framework wrapper, no `client:*` directive) that every page's own inline
+  script imports independently. This doesn't reopen the "no shared component"
+  language from the 3D scene architecture bullet below — that was about
+  avoiding a framework component wrapper, not about sharing plain functions.
+- **Visual consistency despite independent instances**: every page uses the
+  same fixed Perlin seed, palette, and terrain parameters, so it reads as the
+  same frozen lake seen from a different camera position each time, not a
+  freshly randomized terrain per page.
+- **Content legibility**: see *Reading Card* and *Floe Card* in the Glossary —
+  the Reading Zone's "no decoration behind text" concern is now handled per
+  component (a near-opaque panel around body text, a text-only card for list
+  entries) instead of by a page-level zone rule.
+- **Chrome**: the shared `Header`/`Footer` components are dropped site-wide,
+  replaced by a minimal per-page nav (logo + Home/Blog/About), matching the
+  homepage prototype's self-contained nav. Search (`SearchModal`) and social
+  links are removed, not redesigned — an open follow-up, not a decision to
+  keep them out permanently.
+- **Performance floor**: the Lighthouse Performance ≥ 90 hard constraint is
+  downgraded to a known, accepted tension site-wide (previously flagged only
+  for the homepage in `docs/adr/0003-...`) — visual fidelity is prioritized
+  over hitting that number for now.
 
 ### Visual theme: Ice-3D / Frozen Lake (current, supersedes CSS-only Ice)
 - The CSS-only ice theme (issue #2) is **retired, not carried forward as a
@@ -100,25 +165,22 @@ Reading Zone and all site chrome.**
   `RGBFormat` → `RGBAFormat`), not a visual change — the terrain, sky shader,
   lighting, camera orbit, and snow particle system are reused as designed in
   the prototype.
-- **Script re-execution**: the homepage's 3D-scene `<script>` carries
-  `data-astro-rerun`, so returning to the homepage via real navigation
-  re-executes setup (Astro's bundled scripts otherwise run once per session).
+- **Script re-execution**: every page's 3D-scene `<script>` carries
+  `data-astro-rerun`, so returning to it via real navigation re-executes setup
+  (Astro's bundled scripts otherwise run once per session). Originally
+  homepage-only; now applies to every page in the *Continuous World*.
 - **Resource disposal**: a cleanup routine (cancel the render loop, dispose
   renderer/geometry/materials/textures/envMap, remove event listeners) runs on
-  `astro:before-swap` — the last moment the homepage's DOM is still present
+  `astro:before-swap` on every page — the last moment its DOM is still present
   before a real navigation away.
 - **Device capability**: reuses the same 640px viewport-width breakpoint
   already established for the (now-retired) CSS hero's mobile simplification,
   for consistency — not `hardwareConcurrency`/`deviceMemory` (inconsistent
   browser support).
-- **Reading Zone ambient-drift exception**: see the Reading Zone glossary
-  entry's bounded exception (> 30s cycle, < 5% amplitude) — added specifically
-  to permit the prototype's `.aurora-still` background.
-- **New ADR needed**: this is a hard-to-reverse, surprising-without-context
-  architectural shift — the site's CSS-only default now has a real exception
-  (a WebGL rendering engine), which a future reader of the CSS-only glossary
-  entry would not expect. Author `docs/adr/0003-...` recording this when
-  implementation starts, alongside removal of the CSS-only ice hero.
+- **New ADR**: `docs/adr/0003-scoped-webgl-exception-for-immersive-zone.md`
+  recorded the original homepage-only exception; it's superseded by
+  `docs/adr/0004-site-wide-continuous-world.md` now that every page carries a
+  3D scene — see the Site-wide continuous 3D world entry above.
 
 ### Visual theme: Ice / Winter (superseded by Ice-3D above — kept for history)
 - The jungle theme (deep-green palette, vine/leaf artwork, "crossing into the
@@ -165,17 +227,25 @@ Reading Zone and all site chrome.**
   (not many small repeated shapes) — same low-DOM/high-visual-impact strategy as
   the snowfall layers, to protect the performance floor.
 
-### Carried over from the jungle round (still apply, theme-independent)
-- **Theme scope**: full theme in the Immersive Zone, palette-only in the Reading
-  Zone. Protects article readability.
-- **Animation technique**: CSS-only by default; see *CSS-only, with narrow
-  input-reading exceptions* above for the ice-theme refinement.
+### Carried over from the jungle round (theme-independent, but see notes — several superseded by the Site-wide continuous 3D world decision above)
+- **Theme scope** (superseded): "full theme in the Immersive Zone, palette-only
+  in the Reading Zone" no longer applies — there's no zone split; the full
+  theme now renders on every page. See *Continuous World*.
+- **Animation technique**: CSS-only by default; see the (now-retired)
+  *CSS-only, with a scoped Immersive Zone exception* entry above — Three.js is
+  now the site-wide default rendering layer, not a narrow exception.
 - **View Transitions scope**: `<ClientRouter />` enabled site-wide (required by
-  the API); Threshold Transition fires only at the zone boundary.
-- **Performance floor**: Lighthouse Performance ≥ 90 is a hard constraint.
-- **Reduced motion**: Immersive Zone decorative artwork stays fully visible
-  under `prefers-reduced-motion`; only motion is removed.
-- **Theme system**: no light/dark toggle — single, non-switchable theme. Still
-  true under the ice theme, but for a new reason (see ADR-0002, to be written
-  when implementation starts): the theme's extreme contrast lives *within* one
-  screen as a design choice, not as two selectable states.
+  the API) — still true. "Threshold Transition fires only at the zone
+  boundary" is superseded: see *Directional Transition*, which fires on every
+  page-to-page navigation, not just a zone crossing.
+- **Performance floor** (superseded): downgraded from a hard constraint to a
+  known, accepted tension site-wide — see the Site-wide continuous 3D world
+  decision above.
+- **Reduced motion**: decorative artwork stays fully visible under
+  `prefers-reduced-motion`; only motion is removed. Originally
+  Immersive-Zone-only, now applies per page site-wide (each page's own
+  capability check, same as the homepage's).
+- **Theme system**: no light/dark toggle — single, non-switchable theme (see
+  `docs/adr/0002-single-theme-extreme-contrast-not-a-toggle.md`). Unaffected by
+  the zone split's retirement — the rationale was never about zones, only
+  about contrast living within one screen.

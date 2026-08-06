@@ -9,9 +9,9 @@
   from the confirmed prototypes (/demo/ice_terrain_3d.html,
   /demo/hero_to_article_flow.html) — near-black background, teal + violet
   accent pairing, pale ice-white headings, softer blue-gray body copy.
-  See CONTEXT.md (Immersive Zone / Reading Zone) and
+  See CONTEXT.md (Continuous World) and
   docs/adr/0002-single-theme-extreme-contrast-not-a-toggle.md /
-  docs/adr/0003-scoped-webgl-exception-for-immersive-zone.md.
+  docs/adr/0004-site-wide-continuous-world.md.
 */
 :root {
 	--accent: #3ee6c4;
@@ -168,7 +168,7 @@ hr {
 }
 
 /*
-  Threshold Transition is now JS-orchestrated (camera dive + a persisted
-  whiteout overlay + a real navigate() call — see index.astro and
-  ThresholdWhiteout.astro), not a CSS view-transition rule. See CONTEXT.md.
+  Directional Transition (see CONTEXT.md and DirectionalTransition.astro)
+  slides #world in a fixed direction, then calls navigate() — not a CSS
+  view-transition rule.
 */

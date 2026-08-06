@@ -1,7 +1,8 @@
 ---
 import { getCollection } from 'astro:content';
 import BaseHead from '../components/BaseHead.astro';
-import ThresholdWhiteout from '../components/ThresholdWhiteout.astro';
+import DirectionalTransition from '../components/DirectionalTransition.astro';
+import Nav from '../components/Nav.astro';
 import { SITE_DESCRIPTION, SITE_TITLE } from '../consts';
 
 // Reused as the "最新一篇" entry point from /demo/hero_to_article_flow.html,
@@ -18,52 +19,51 @@ const latestPost = posts[0];
 	<head>
 		<BaseHead title={SITE_TITLE} description={SITE_DESCRIPTION} />
 	</head>
-	<body data-zone="immersive">
-		<ThresholdWhiteout />
+	<body>
+		<DirectionalTransition />
+		<div id="world">
+			<Nav />
 
-		<!--
-		  The Immersive Zone: reused directly from /demo/ice_terrain_3d.html and
-		  /demo/hero_to_article_flow.html. This markup IS the fallback (dark
-		  background, real headline, a real link) by construction — the WebGL
-		  setup script below only ever *adds* a canvas into #canvas-wrap when
-		  WebGL is available and prefers-reduced-motion isn't set. There is no
-		  separate fallback tree to keep in sync.
+			<!--
+			  Home's own room in the Continuous World (see CONTEXT.md). This markup
+			  IS the fallback (dark background, real headline, a real link) by
+			  construction — the WebGL setup script below only ever *adds* a canvas
+			  into #canvas-wrap when WebGL is available and prefers-reduced-motion
+			  isn't set. There is no separate fallback tree to keep in sync.
+			-->
+			<main class="ice-hero" id="ice-hero">
+				<div class="canvas-wrap" id="canvas-wrap" aria-hidden="true"></div>
 
-		  This page intentionally reuses the prototypes' own self-contained nav
-		  (logo + hint) instead of the shared <Header>/<Footer> — that's what's
-		  actually in the confirmed prototypes, not a redesign.
-		-->
-		<main class="ice-hero" id="ice-hero">
-			<div class="canvas-wrap" id="canvas-wrap" aria-hidden="true"></div>
+				<div class="overlay">
+					<div class="bottom-bar">
+						<div class="headline">
+							<div class="eyebrow">哎呦，這不薄冰哥嗎 · ON THIN ICE</div>
+							<h1>{SITE_TITLE}</h1>
+							<p class="sub">{SITE_DESCRIPTION}</p>
+							<p class="drag-hint">拖曳可轉動視角</p>
+						</div>
 
-			<div class="overlay">
-				<nav>
-					<a class="logo" href="/">{SITE_TITLE}</a>
-					<div class="hint">拖曳可轉動視角</div>
-				</nav>
-
-				<div class="bottom-bar">
-					<div class="headline">
-						<div class="eyebrow">如履薄冰 · ON THIN ICE</div>
-						<h1>{SITE_TITLE}</h1>
-						<p class="sub">{SITE_DESCRIPTION}</p>
-					</div>
-
-					<div class="hero-actions">
-						{
-							latestPost && (
-								<a class="floe" id="enter-article" href={`/blog/${latestPost.id}/`}>
-									<div class="label">最新一篇</div>
-									<div class="title">{latestPost.data.title}</div>
-									<div class="hint">點擊進入文章 →</div>
-								</a>
-							)
-						}
-						<button class="regen-btn" id="regen" type="button" hidden>重新生成地形 ↻</button>
+						<div class="hero-actions">
+							{
+								latestPost && (
+									<a
+										class="floe"
+										id="enter-article"
+										href={`/blog/${latestPost.id}/`}
+										data-nav-direction="right"
+									>
+										<div class="label">最新一篇</div>
+										<div class="title">{latestPost.data.title}</div>
+										<div class="hint">點擊走到對岸 →</div>
+									</a>
+								)
+							}
+							<button class="regen-btn" id="regen" type="button" hidden>重新生成地形 ↻</button>
+						</div>
 					</div>
 				</div>
-			</div>
-		</main>
+			</main>
+		</div>
 
 		<script>
 			// Astro's client router only ever evaluates a *bundled* module script's
@@ -76,25 +76,22 @@ const latestPost = posts[0];
 			// below just calls the entry point it exposes — that's what re-runs on
 			// every real return to the homepage.
 			import * as THREE from 'three';
-			import { navigate } from 'astro:transitions/client';
-
-			// ---------- capability check: fallback stays as-is if either fails ----------
-			function supportsWebGL() {
-				try {
-					const canvas = document.createElement('canvas');
-					return !!(
-						window.WebGLRenderingContext &&
-						(canvas.getContext('webgl2') || canvas.getContext('webgl'))
-					);
-				} catch {
-					return false;
-				}
-			}
+			import {
+				ICE_WORLD_SEED,
+				createEnvMap,
+				createSkyMesh,
+				createSnowField,
+				createTerrain,
+				disposeObject3D,
+				supportsWebGL,
+				updateSkyMesh,
+				updateSnowField,
+			} from '../scripts/iceWorld';
 
 			function initIceScene() {
 				const hero = document.getElementById('ice-hero');
 				const canvasWrap = document.getElementById('canvas-wrap');
-				const regenButton = document.getElementById('regen');
+				const regenButton = document.getElementById('regen') as HTMLButtonElement | null;
 				if (!hero || !canvasWrap || !regenButton) {
 					throw new Error('ice-hero markup missing expected elements');
 				}
@@ -105,447 +102,184 @@ const latestPost = posts[0];
 				initScene();
 
 				function initScene() {
-				// ---------- Perlin 2D noise (seedable), from ice_terrain_3d.html ----------
-				function makePerlin(seed) {
-					const perm = new Uint8Array(256);
-					for (let i = 0; i < 256; i++) perm[i] = i;
-					let s = seed || 1;
-					function rand() {
-						s = (s * 9301 + 49297) % 233280;
-						return s / 233280;
+					// Desktop reuses ice_terrain_3d.html's fuller values; mobile reuses
+					// hero_to_article_flow.html's lighter ones — the same 640px breakpoint
+					// convention used by every page's mobile simplification.
+					const isMobile = window.innerWidth < 640;
+					const SEGMENTS = isMobile ? 90 : 130;
+					const SNOW_COUNT = isMobile ? 900 : 2200;
+					const SIZE = 46;
+
+					// ---------- renderer / scene / camera ----------
+					const renderer = new THREE.WebGLRenderer({ antialias: true });
+					renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+					renderer.setSize(canvasWrap!.clientWidth, canvasWrap!.clientHeight);
+					renderer.outputColorSpace = THREE.SRGBColorSpace;
+					renderer.toneMapping = THREE.ACESFilmicToneMapping;
+					renderer.toneMappingExposure = 1.15;
+					canvasWrap!.appendChild(renderer.domElement);
+
+					const scene = new THREE.Scene();
+					scene.fog = new THREE.FogExp2(0x0a1522, 0.032);
+
+					const camera = new THREE.PerspectiveCamera(
+						45,
+						canvasWrap!.clientWidth / canvasWrap!.clientHeight,
+						0.1,
+						200,
+					);
+
+					function onResize() {
+						camera.aspect = canvasWrap!.clientWidth / canvasWrap!.clientHeight;
+						camera.updateProjectionMatrix();
+						renderer.setSize(canvasWrap!.clientWidth, canvasWrap!.clientHeight);
 					}
-					for (let i = 255; i > 0; i--) {
-						const j = Math.floor(rand() * (i + 1));
-						const t = perm[i];
-						perm[i] = perm[j];
-						perm[j] = t;
-					}
-					const p = new Uint8Array(512);
-					for (let i = 0; i < 512; i++) p[i] = perm[i & 255];
-					function fade(t) {
-						return t * t * t * (t * (t * 6 - 15) + 10);
-					}
-					function lerp(a, b, t) {
-						return a + t * (b - a);
-					}
-					function grad(hash, x, y) {
-						const h = hash & 7;
-						const u = h < 4 ? x : y,
-							v = h < 4 ? y : x;
-						return ((h & 1) ? -u : u) + ((h & 2) ? -2 * v : 2 * v);
-					}
-					return function noise(x, y) {
-						const X = Math.floor(x) & 255,
-							Y = Math.floor(y) & 255;
-						x -= Math.floor(x);
-						y -= Math.floor(y);
-						const u = fade(x),
-							v = fade(y);
-						const aa = p[p[X] + Y],
-							ab = p[p[X] + Y + 1],
-							ba = p[p[X + 1] + Y],
-							bb = p[p[X + 1] + Y + 1];
-						return lerp(
-							lerp(grad(aa, x, y), grad(ba, x - 1, y), u),
-							lerp(grad(ab, x, y - 1), grad(bb, x - 1, y - 1), u),
-							v,
-						);
-					};
-				}
+					window.addEventListener('resize', onResize);
 
-				// ---------- device tier ----------
-				// Desktop reuses ice_terrain_3d.html's fuller values; mobile reuses
-				// hero_to_article_flow.html's lighter ones — the same 640px breakpoint
-				// convention used by every prior theme's mobile simplification.
-				const isMobile = window.innerWidth < 640;
-				const SEGMENTS = isMobile ? 90 : 130;
-				const SNOW_COUNT = isMobile ? 900 : 2200;
-				const SIZE = 46;
+					const skyMesh = createSkyMesh();
+					scene.add(skyMesh);
 
-				// ---------- renderer / scene / camera ----------
-				const renderer = new THREE.WebGLRenderer({ antialias: true });
-				renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-				renderer.setSize(canvasWrap.clientWidth, canvasWrap.clientHeight);
-				renderer.outputColorSpace = THREE.SRGBColorSpace;
-				renderer.toneMapping = THREE.ACESFilmicToneMapping;
-				renderer.toneMappingExposure = 1.15;
-				canvasWrap.appendChild(renderer.domElement);
+					const envMap = createEnvMap(renderer);
+					scene.environment = envMap;
 
-				const scene = new THREE.Scene();
-				scene.fog = new THREE.FogExp2(0x0a1522, 0.032);
+					// ---------- lights ----------
+					const dirLight = new THREE.DirectionalLight(0xdbeeff, 1.6);
+					dirLight.position.set(8, 14, 6);
+					scene.add(dirLight);
+					scene.add(new THREE.AmbientLight(0x233d52, 0.55));
+					const rim = new THREE.PointLight(0x3ee6c4, 1.4, 40);
+					rim.position.set(-10, 4, -8);
+					scene.add(rim);
+					const rim2 = new THREE.PointLight(0x8a7cf0, 1.0, 40);
+					rim2.position.set(10, 3, -10);
+					scene.add(rim2);
 
-				const camera = new THREE.PerspectiveCamera(
-					45,
-					canvasWrap.clientWidth / canvasWrap.clientHeight,
-					0.1,
-					200,
-				);
-
-				function onResize() {
-					camera.aspect = canvasWrap.clientWidth / canvasWrap.clientHeight;
-					camera.updateProjectionMatrix();
-					renderer.setSize(canvasWrap.clientWidth, canvasWrap.clientHeight);
-				}
-				window.addEventListener('resize', onResize);
-
-				// ---------- sky dome (aurora gradient shader) ----------
-				function makeSkyMesh() {
-					const geo = new THREE.SphereGeometry(80, 32, 32);
-					const mat = new THREE.ShaderMaterial({
-						uniforms: {
-							time: { value: 0 },
-							topColor: { value: new THREE.Color(0x142338) },
-							bottomColor: { value: new THREE.Color(0x04070d) },
-							auroraA: { value: new THREE.Color(0x3ee6c4) },
-							auroraB: { value: new THREE.Color(0x8a7cf0) },
-						},
-						vertexShader: `
-							varying vec3 vPos;
-							void main() {
-								vPos = position;
-								gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-							}
-						`,
-						fragmentShader: `
-							varying vec3 vPos;
-							uniform float time;
-							uniform vec3 topColor, bottomColor, auroraA, auroraB;
-							void main() {
-								float h = normalize(vPos).y * 0.5 + 0.5;
-								vec3 base = mix(bottomColor, topColor, h);
-								float band = sin(vPos.x * 0.05 + time * 0.15) * 0.5 + 0.5;
-								band *= smoothstep(0.15, 0.75, h) * smoothstep(1.0, 0.6, h);
-								vec3 aurora = mix(auroraA, auroraB, sin(vPos.z * 0.04 + time * 0.1) * 0.5 + 0.5);
-								vec3 color = base + aurora * band * 0.35;
-								gl_FragColor = vec4(color, 1.0);
-							}
-						`,
-						side: THREE.BackSide,
-					});
-					return new THREE.Mesh(geo, mat);
-				}
-
-				const skyMesh = makeSkyMesh();
-				scene.add(skyMesh);
-
-				// ---------- environment map (for PBR reflections/transmission) ----------
-				function buildEnvMap() {
-					const envScene = new THREE.Scene();
-					envScene.add(makeSkyMesh());
-					const dl = new THREE.DirectionalLight(0xcfe9f5, 1.4);
-					dl.position.set(6, 10, 4);
-					envScene.add(dl);
-					envScene.add(new THREE.AmbientLight(0x2a3f52, 0.7));
-
-					const cubeRT = new THREE.WebGLCubeRenderTarget(256, {
-						format: THREE.RGBAFormat,
-						generateMipmaps: true,
-						minFilter: THREE.LinearMipmapLinearFilter,
-					});
-					const cubeCam = new THREE.CubeCamera(0.1, 100, cubeRT);
-					envScene.add(cubeCam);
-					cubeCam.update(renderer, envScene);
-					return cubeRT.texture;
-				}
-				const envMap = buildEnvMap();
-				scene.environment = envMap;
-
-				// ---------- lights ----------
-				const dirLight = new THREE.DirectionalLight(0xdbeeff, 1.6);
-				dirLight.position.set(8, 14, 6);
-				scene.add(dirLight);
-
-				scene.add(new THREE.AmbientLight(0x233d52, 0.55));
-
-				const rim = new THREE.PointLight(0x3ee6c4, 1.4, 40);
-				rim.position.set(-10, 4, -8);
-				scene.add(rim);
-
-				const rim2 = new THREE.PointLight(0x8a7cf0, 1.0, 40);
-				rim2.position.set(10, 3, -10);
-				scene.add(rim2);
-
-				// ---------- procedural ice terrain ----------
-				let terrainMesh = null;
-
-				function buildTerrain(seed) {
-					if (terrainMesh) {
-						scene.remove(terrainMesh);
-						terrainMesh.geometry.dispose();
-						terrainMesh.material.dispose();
-					}
-					const noise = makePerlin(seed);
-					const geo = new THREE.PlaneGeometry(SIZE, SIZE, SEGMENTS, SEGMENTS);
-					geo.rotateX(-Math.PI / 2);
-					const pos = geo.attributes.position;
-					const colors = new Float32Array(pos.count * 3);
-					const cA = new THREE.Color(0x0b2032);
-					const cB = new THREE.Color(0xeaf7ff);
-					const cTeal = new THREE.Color(0x3ee6c4);
-
-					for (let i = 0; i < pos.count; i++) {
-						const x = pos.getX(i),
-							z = pos.getZ(i);
-						let h = 0,
-							amp = 1,
-							freq = 0.045,
-							norm = 0;
-						for (let o = 0; o < 5; o++) {
-							h += noise(x * freq + seed, z * freq - seed) * amp;
-							norm += amp;
-							amp *= 0.5;
-							freq *= 2;
+					// ---------- procedural ice terrain (regenerable for the homepage's
+					// interactive "regen" button; every other page uses ICE_WORLD_SEED
+					// as-is, unregenerated, for visual consistency) ----------
+					let terrainMesh: THREE.Mesh | null = null;
+					function buildTerrain(seed: number) {
+						if (terrainMesh) {
+							scene.remove(terrainMesh);
+							disposeObject3D(terrainMesh);
 						}
-						h /= norm;
-						const ridgeN = noise(x * 0.09 + seed * 2, z * 0.09 - seed * 2);
-						const ridge = Math.pow(1 - Math.abs(ridgeN), 4);
-						const height = h * 2.4 + ridge * 1.1;
-						pos.setY(i, height);
-
-						const t = THREE.MathUtils.clamp((height + 1.6) / 3.2, 0, 1);
-						const c = cA.clone().lerp(cB, t);
-						if (ridge > 0.5) c.lerp(cTeal, (ridge - 0.5) * 0.5);
-						colors[i * 3] = c.r;
-						colors[i * 3 + 1] = c.g;
-						colors[i * 3 + 2] = c.b;
+						terrainMesh = createTerrain({ seed, size: SIZE, segments: SEGMENTS, envMap });
+						scene.add(terrainMesh);
 					}
-					geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-					geo.computeVertexNormals();
+					buildTerrain(ICE_WORLD_SEED);
 
-					const mat = new THREE.MeshPhysicalMaterial({
-						vertexColors: true,
-						roughness: 0.3,
-						metalness: 0.04,
-						transmission: 0.5,
-						thickness: 1.3,
-						ior: 1.31,
-						clearcoat: 0.6,
-						clearcoatRoughness: 0.18,
-						envMap: envMap,
-						envMapIntensity: 1.25,
-						side: THREE.DoubleSide,
-					});
+					// ---------- snow ----------
+					const snow = createSnowField({ count: SNOW_COUNT, size: SIZE, fallHeight: 22 });
+					scene.add(snow.points);
 
-					terrainMesh = new THREE.Mesh(geo, mat);
-					scene.add(terrainMesh);
-				}
-				buildTerrain(Math.random() * 1000);
+					// ---------- interaction: drag to orbit ----------
+					let isDragging = false;
+					let lastX = 0;
+					let lastY = 0;
+					let theta = 0.5;
+					let phi = 1.15;
+					let radius = 15;
 
-				// ---------- snow particle point cloud ----------
-				function makeSnowTexture() {
-					const c = document.createElement('canvas');
-					c.width = c.height = 64;
-					const ctx = c.getContext('2d');
-					const g = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
-					g.addColorStop(0, 'rgba(255,255,255,1)');
-					g.addColorStop(0.4, 'rgba(255,255,255,0.7)');
-					g.addColorStop(1, 'rgba(255,255,255,0)');
-					ctx.fillStyle = g;
-					ctx.fillRect(0, 0, 64, 64);
-					return new THREE.CanvasTexture(c);
-				}
-
-				const snowGeo = new THREE.BufferGeometry();
-				const positions = new Float32Array(SNOW_COUNT * 3);
-				const velocities = new Float32Array(SNOW_COUNT);
-				const phases = new Float32Array(SNOW_COUNT);
-
-				for (let i = 0; i < SNOW_COUNT; i++) {
-					positions[i * 3] = (Math.random() - 0.5) * SIZE;
-					positions[i * 3 + 1] = Math.random() * 22;
-					positions[i * 3 + 2] = (Math.random() - 0.5) * SIZE;
-					velocities[i] = 0.4 + Math.random() * 0.9;
-					phases[i] = Math.random() * Math.PI * 2;
-				}
-				snowGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-
-				const snowMat = new THREE.PointsMaterial({
-					size: 0.16,
-					map: makeSnowTexture(),
-					transparent: true,
-					depthWrite: false,
-					sizeAttenuation: true,
-					opacity: 0.9,
-					color: 0xffffff,
-				});
-				const snowPoints = new THREE.Points(snowGeo, snowMat);
-				scene.add(snowPoints);
-
-				// ---------- interaction: drag to orbit ----------
-				let isDragging = false,
-					lastX = 0,
-					lastY = 0;
-				let theta = 0.5,
-					phi = 1.15,
-					radius = 15;
-
-				function updateCamera() {
-					camera.position.x = radius * Math.sin(phi) * Math.sin(theta);
-					camera.position.z = radius * Math.sin(phi) * Math.cos(theta);
-					camera.position.y = radius * Math.cos(phi) + 3;
-					camera.lookAt(0, 1, 0);
-				}
-				updateCamera();
-
-				renderer.domElement.style.touchAction = 'none';
-
-				function onPointerDown(e) {
-					isDragging = true;
-					lastX = e.clientX;
-					lastY = e.clientY;
-				}
-				function onPointerUp() {
-					isDragging = false;
-				}
-				function onPointerMove(e) {
-					if (!isDragging) return;
-					const dx = e.clientX - lastX,
-						dy = e.clientY - lastY;
-					lastX = e.clientX;
-					lastY = e.clientY;
-					theta -= dx * 0.005;
-					phi = THREE.MathUtils.clamp(phi - dy * 0.005, 0.4, 1.5);
-					updateCamera();
-				}
-				function onWheel(e) {
-					radius = THREE.MathUtils.clamp(radius + e.deltaY * 0.01, 8, 28);
-					updateCamera();
-				}
-				renderer.domElement.addEventListener('pointerdown', onPointerDown);
-				window.addEventListener('pointerup', onPointerUp);
-				window.addEventListener('pointermove', onPointerMove);
-				renderer.domElement.addEventListener('wheel', onWheel, { passive: true });
-
-				// ---------- regenerate button ----------
-				function onRegenClick() {
-					buildTerrain(Math.random() * 1000);
-				}
-				regenButton.addEventListener('click', onRegenClick);
-				regenButton.hidden = false;
-
-				// ---------- Threshold Transition: dive -> whiteout -> real navigate() ----------
-				let diving = false,
-					diveT = 0,
-					diveStartRadius = radius,
-					diveStartPhi = phi;
-
-				function enterReadingZone(href) {
-					if (diving) return;
-					diving = true;
-					diveT = 0;
-					// Fixed vs. the prototype: interpolate from wherever the camera
-					// actually is (it may have been manually dragged), not a hardcoded
-					// baseline — avoids a visible snap at dive-start.
-					diveStartRadius = radius;
-					diveStartPhi = phi;
-
-					const whiteout = document.getElementById('threshold-whiteout');
-					if (whiteout) whiteout.style.opacity = '1';
-
-					window.setTimeout(() => {
-						navigate(href);
-					}, 650);
-				}
-
-				function isReadingZoneLink(anchor) {
-					if (!anchor || anchor.origin !== window.location.origin) return false;
-					if (anchor.target === '_blank') return false;
-					if (anchor.pathname === window.location.pathname) return false;
-					return true;
-				}
-
-				function onDocumentClick(event) {
-					if (event.defaultPrevented || event.button !== 0) return;
-					if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-					const anchor = event.target instanceof Element ? event.target.closest('a') : null;
-					if (!isReadingZoneLink(anchor)) return;
-					event.preventDefault();
-					enterReadingZone(anchor.href);
-				}
-				document.addEventListener('click', onDocumentClick, true);
-
-				// ---------- render loop ----------
-				const clock = new THREE.Clock();
-				let rafId = 0;
-				function animate() {
-					rafId = requestAnimationFrame(animate);
-					const dt = clock.getDelta();
-					const elapsed = clock.getElapsedTime();
-
-					skyMesh.material.uniforms.time.value = elapsed;
-
-					const posAttr = snowGeo.attributes.position;
-					for (let i = 0; i < SNOW_COUNT; i++) {
-						let y = posAttr.array[i * 3 + 1] - velocities[i] * dt * 1.4;
-						if (y < -1) y = 20 + Math.random() * 2;
-						posAttr.array[i * 3 + 1] = y;
-						posAttr.array[i * 3] += Math.sin(elapsed * 0.5 + phases[i]) * 0.003;
+					function updateCamera() {
+						camera.position.x = radius * Math.sin(phi) * Math.sin(theta);
+						camera.position.z = radius * Math.sin(phi) * Math.cos(theta);
+						camera.position.y = radius * Math.cos(phi) + 3;
+						camera.lookAt(0, 1, 0);
 					}
-					posAttr.needsUpdate = true;
+					updateCamera();
 
-					if (diving) {
-						diveT += dt;
-						const p = Math.min(diveT / 1.1, 1);
-						radius = diveStartRadius - p * (diveStartRadius - 3);
-						phi = diveStartPhi - p * 0.5;
-						updateCamera();
-					} else if (!isDragging) {
-						theta += dt * 0.02;
+					renderer.domElement.style.touchAction = 'none';
+
+					function onPointerDown(e: PointerEvent) {
+						isDragging = true;
+						lastX = e.clientX;
+						lastY = e.clientY;
+					}
+					function onPointerUp() {
+						isDragging = false;
+					}
+					function onPointerMove(e: PointerEvent) {
+						if (!isDragging) return;
+						const dx = e.clientX - lastX;
+						const dy = e.clientY - lastY;
+						lastX = e.clientX;
+						lastY = e.clientY;
+						theta -= dx * 0.005;
+						phi = THREE.MathUtils.clamp(phi - dy * 0.005, 0.4, 1.5);
 						updateCamera();
 					}
-
-					rim.position.x = Math.sin(elapsed * 0.2) * 10;
-					rim2.position.x = Math.cos(elapsed * 0.17) * 10;
-
-					renderer.render(scene, camera);
-				}
-				animate();
-
-				// ---------- resource disposal on real navigation away from home ----------
-				function disposeScene() {
-					cancelAnimationFrame(rafId);
-					window.removeEventListener('resize', onResize);
-					window.removeEventListener('pointerup', onPointerUp);
-					window.removeEventListener('pointermove', onPointerMove);
-					renderer.domElement.removeEventListener('pointerdown', onPointerDown);
-					renderer.domElement.removeEventListener('wheel', onWheel);
-					regenButton.removeEventListener('click', onRegenClick);
-					document.removeEventListener('click', onDocumentClick, true);
-
-					scene.traverse((obj) => {
-						if (obj.geometry) obj.geometry.dispose();
-						const materials = obj.material
-							? Array.isArray(obj.material)
-								? obj.material
-								: [obj.material]
-							: [];
-						for (const material of materials) {
-							if (material.map) material.map.dispose();
-							material.dispose();
-						}
-					});
-					envMap.dispose();
-					renderer.dispose();
-					renderer.domElement.remove();
-
-					document.removeEventListener('astro:before-swap', disposeScene);
-					if (window.__iceSceneCleanup === disposeScene) {
-						delete window.__iceSceneCleanup;
+					function onWheel(e: WheelEvent) {
+						radius = THREE.MathUtils.clamp(radius + e.deltaY * 0.01, 8, 28);
+						updateCamera();
 					}
-				}
+					renderer.domElement.addEventListener('pointerdown', onPointerDown);
+					window.addEventListener('pointerup', onPointerUp);
+					window.addEventListener('pointermove', onPointerMove);
+					renderer.domElement.addEventListener('wheel', onWheel, { passive: true });
 
-				// initIceScene() re-runs on every real return to the homepage (see the
-				// trigger script below) — replace any stale listener from a previous
-				// mount rather than stacking a new one on top of it.
-				if (window.__iceSceneCleanup) {
-					document.removeEventListener('astro:before-swap', window.__iceSceneCleanup);
-				}
-				window.__iceSceneCleanup = disposeScene;
-				document.addEventListener('astro:before-swap', disposeScene);
+					// ---------- regenerate button ----------
+					function onRegenClick() {
+						buildTerrain(Math.random() * 1000);
+					}
+					regenButton!.addEventListener('click', onRegenClick);
+					regenButton!.hidden = false;
+
+					// ---------- render loop ----------
+					const clock = new THREE.Clock();
+					let rafId = 0;
+					function animate() {
+						rafId = requestAnimationFrame(animate);
+						const dt = clock.getDelta();
+						const elapsed = clock.getElapsedTime();
+
+						updateSkyMesh(skyMesh, elapsed);
+						updateSnowField(snow, dt, elapsed);
+
+						if (!isDragging) {
+							theta += dt * 0.02;
+							updateCamera();
+						}
+
+						rim.position.x = Math.sin(elapsed * 0.2) * 10;
+						rim2.position.x = Math.cos(elapsed * 0.17) * 10;
+
+						renderer.render(scene, camera);
+					}
+					animate();
+
+					// ---------- resource disposal on real navigation away from home ----------
+					function disposeScene() {
+						cancelAnimationFrame(rafId);
+						window.removeEventListener('resize', onResize);
+						window.removeEventListener('pointerup', onPointerUp);
+						window.removeEventListener('pointermove', onPointerMove);
+						renderer.domElement.removeEventListener('pointerdown', onPointerDown);
+						renderer.domElement.removeEventListener('wheel', onWheel);
+						regenButton!.removeEventListener('click', onRegenClick);
+
+						disposeObject3D(scene);
+						envMap.dispose();
+						renderer.dispose();
+						renderer.domElement.remove();
+
+						document.removeEventListener('astro:before-swap', disposeScene);
+						if ((window as any).__iceSceneCleanup === disposeScene) {
+							delete (window as any).__iceSceneCleanup;
+						}
+					}
+
+					// initIceScene() re-runs on every real return to the homepage (see the
+					// trigger script below) — replace any stale listener from a previous
+					// mount rather than stacking a new one on top of it.
+					if ((window as any).__iceSceneCleanup) {
+						document.removeEventListener('astro:before-swap', (window as any).__iceSceneCleanup);
+					}
+					(window as any).__iceSceneCleanup = disposeScene;
+					document.addEventListener('astro:before-swap', disposeScene);
 				}
 			}
 
-			window.__initIceScene = initIceScene;
+			(window as any).__initIceScene = initIceScene;
 
 			// Module scripts are deferred (they run after the document is parsed),
 			// but the data-astro-rerun classic script below runs immediately in
@@ -575,8 +309,10 @@ const latestPost = posts[0];
 	.ice-hero {
 		position: relative;
 		width: 100%;
-		min-height: 100vh;
+		max-width: none;
+		min-height: calc(100vh - 5.5rem);
 		margin: 0;
+		padding: 0;
 		overflow: hidden;
 		background: linear-gradient(180deg, rgb(var(--surface)) 0%, rgb(var(--bg)) 100%);
 		color: rgb(var(--black));
@@ -596,25 +332,9 @@ const latestPost = posts[0];
 		z-index: 1;
 		display: flex;
 		flex-direction: column;
-		justify-content: space-between;
-		min-height: 100vh;
-		padding: 2rem clamp(1.2rem, 4vw, 3.5rem);
-	}
-
-	nav {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		font-size: 0.85rem;
-		letter-spacing: 0.08em;
-	}
-	nav .logo {
-		font-weight: 600;
-		color: rgb(var(--black));
-		text-decoration: none;
-	}
-	nav .hint {
-		color: rgb(var(--gray));
+		justify-content: flex-end;
+		min-height: calc(100vh - 5.5rem);
+		padding: 0 clamp(1.2rem, 4vw, 3.5rem) 2rem;
 	}
 
 	.bottom-bar {
@@ -657,6 +377,12 @@ const latestPost = posts[0];
 		max-width: 30em;
 		line-height: 1.7;
 		text-shadow: 0 2px 20px rgba(4, 7, 13, 80%);
+	}
+	.headline .drag-hint {
+		margin-top: 0.5rem;
+		font-size: 0.78rem;
+		letter-spacing: 0.05em;
+		color: rgb(var(--gray));
 	}
 
 	.hero-actions {

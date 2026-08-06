@@ -1,0 +1,151 @@
+---
+// Fixed-camera, non-interactive 3D background for list-style Reading-Card-era
+// pages (blog index, tag-filtered list). Lighter than the homepage's
+// interactive scene — this page is for browsing, not exploring — and reuses
+// ICE_WORLD_SEED so it reads as the same frozen lake from a different angle.
+// The homepage keeps its own script (drag-to-orbit, regen button) since none
+// of that interactivity applies here; see CONTEXT.md's Continuous World
+// entry for why each page owns an independent instance rather than sharing
+// one renderer.
+---
+
+<div class="canvas-wrap" id="canvas-wrap" aria-hidden="true"></div>
+
+<script>
+	import * as THREE from 'three';
+	import {
+		ICE_WORLD_SEED,
+		createEnvMap,
+		createSkyMesh,
+		createSnowField,
+		createTerrain,
+		disposeObject3D,
+		supportsWebGL,
+		updateSkyMesh,
+		updateSnowField,
+	} from '../scripts/iceWorld';
+
+	function initIceScene() {
+		const canvasWrap = document.getElementById('canvas-wrap');
+		if (!canvasWrap) throw new Error('IceBackground markup missing #canvas-wrap');
+
+		const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+		if (!supportsWebGL() || prefersReducedMotion) return;
+
+		const isMobile = window.innerWidth < 640;
+		const SEGMENTS = isMobile ? 44 : 64;
+		const SNOW_COUNT = isMobile ? 220 : 420;
+		const SIZE = 46;
+
+		const renderer = new THREE.WebGLRenderer({ antialias: true });
+		renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
+		renderer.setSize(window.innerWidth, window.innerHeight);
+		renderer.outputColorSpace = THREE.SRGBColorSpace;
+		renderer.toneMapping = THREE.ACESFilmicToneMapping;
+		renderer.toneMappingExposure = 1.1;
+		canvasWrap.appendChild(renderer.domElement);
+
+		const scene = new THREE.Scene();
+		scene.fog = new THREE.FogExp2(0x0a1522, 0.038);
+		const camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.1, 200);
+
+		function onResize() {
+			camera.aspect = window.innerWidth / window.innerHeight;
+			camera.updateProjectionMatrix();
+			renderer.setSize(window.innerWidth, window.innerHeight);
+		}
+		window.addEventListener('resize', onResize);
+
+		const skyMesh = createSkyMesh();
+		scene.add(skyMesh);
+
+		const envMap = createEnvMap(renderer, 128);
+		scene.environment = envMap;
+
+		const dirLight = new THREE.DirectionalLight(0xdbeeff, 1.5);
+		dirLight.position.set(8, 14, 6);
+		scene.add(dirLight);
+		scene.add(new THREE.AmbientLight(0x233d52, 0.55));
+		const rim = new THREE.PointLight(0x3ee6c4, 1.2, 40);
+		rim.position.set(-10, 4, -8);
+		scene.add(rim);
+
+		// Anchor shifted so terrain sits lower-left, leaving open sky/aurora area
+		// top-right for the readable page-header/grid overlay — same
+		// composition as /demo/blog_list_3d.html.
+		const anchor = new THREE.Group();
+		anchor.position.set(-9, -3, 4);
+		scene.add(anchor);
+
+		const terrainMesh = createTerrain({
+			seed: ICE_WORLD_SEED,
+			size: SIZE,
+			segments: SEGMENTS,
+			envMap,
+		});
+		anchor.add(terrainMesh);
+
+		const snow = createSnowField({ count: SNOW_COUNT, size: SIZE, fallHeight: 16 });
+		anchor.add(snow.points);
+
+		// Fixed composition: camera pulled up + left + back, tilted down toward
+		// the terrain corner so most of the frame stays open sky/aurora — the
+		// "safe zone" for the Reading Card/grid overlay. No drag interaction.
+		camera.position.set(-2, 11, 16);
+		camera.lookAt(-6, -1, 2);
+
+		const clock = new THREE.Clock();
+		let rafId = 0;
+		function animate() {
+			rafId = requestAnimationFrame(animate);
+			const dt = clock.getDelta();
+			const elapsed = clock.getElapsedTime();
+
+			updateSkyMesh(skyMesh, elapsed);
+			updateSnowField(snow, dt, elapsed);
+			anchor.rotation.y = Math.sin(elapsed * 0.03) * 0.03;
+			rim.position.x = -10 + Math.sin(elapsed * 0.15) * 4;
+
+			renderer.render(scene, camera);
+		}
+		animate();
+
+		function disposeScene() {
+			cancelAnimationFrame(rafId);
+			window.removeEventListener('resize', onResize);
+			disposeObject3D(scene);
+			envMap.dispose();
+			renderer.dispose();
+			renderer.domElement.remove();
+			document.removeEventListener('astro:before-swap', disposeScene);
+			if ((window as any).__iceSceneCleanup === disposeScene) {
+				delete (window as any).__iceSceneCleanup;
+			}
+		}
+		if ((window as any).__iceSceneCleanup) {
+			document.removeEventListener('astro:before-swap', (window as any).__iceSceneCleanup);
+		}
+		(window as any).__iceSceneCleanup = disposeScene;
+		document.addEventListener('astro:before-swap', disposeScene);
+	}
+
+	(window as any).__initIceScene = initIceScene;
+	initIceScene();
+</script>
+
+<script data-astro-rerun>
+	if (typeof window.__initIceScene === 'function') {
+		window.__initIceScene();
+	}
+</script>
+
+<style>
+	.canvas-wrap {
+		position: fixed;
+		inset: 0;
+		z-index: 0;
+	}
+	.canvas-wrap :global(canvas) {
+		display: block;
+	}
+</style>

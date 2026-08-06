@@ -3,10 +3,9 @@ import { Image } from 'astro:assets';
 import { type CollectionEntry, getCollection } from 'astro:content';
 import BaseHead from '../components/BaseHead.astro';
 import CrackDivider from '../components/CrackDivider.astro';
-import Footer from '../components/Footer.astro';
+import DirectionalTransition from '../components/DirectionalTransition.astro';
 import FormattedDate from '../components/FormattedDate.astro';
-import Header from '../components/Header.astro';
-import ThresholdWhiteout from '../components/ThresholdWhiteout.astro';
+import Nav from '../components/Nav.astro';
 
 type Props = CollectionEntry<'blog'>['data'] & { id: CollectionEntry<'blog'>['id'] };
 
@@ -23,148 +22,310 @@ const seriesIndex = seriesEntries.findIndex((entry) => entry.id === id);
 <html lang="en">
 	<head>
 		<BaseHead title={title} description={description} />
-		<style>
-			main {
-				width: calc(100% - 2em);
-				max-width: 100%;
-				margin: 0;
-			}
-			.hero-image {
-				width: 100%;
-			}
-			.hero-image img {
-				display: block;
-				margin: 0 auto;
-				border-radius: 12px;
-				box-shadow: var(--box-shadow);
-			}
-			.prose {
-				width: 720px;
-				max-width: calc(100% - 2em);
-				margin: auto;
-				padding: 1em;
-				color: rgb(var(--gray-dark));
-			}
-			.title {
-				margin-bottom: 1em;
-				padding: 1em 0;
-				text-align: center;
-				line-height: 1;
-			}
-			.title h1 {
-				margin: 0 0 0.5em 0;
-			}
-			.date {
-				margin-bottom: 0.5em;
-				color: rgb(var(--gray));
-			}
-			.last-updated-on {
-				font-style: italic;
-			}
-			.tags {
-				display: flex;
-				flex-wrap: wrap;
-				justify-content: center;
-				gap: 0.5em;
-				margin-top: 0.75em;
-			}
-			.tag {
-				padding: 0.25em 0.75em;
-				border-radius: 999px;
-				background: rgb(var(--gray-light));
-				color: rgb(var(--gray-dark));
-				font-size: 0.8em;
-				text-decoration: none;
-			}
-			.tag:hover {
-				color: var(--accent);
-			}
-			.series {
-				width: 720px;
-				max-width: calc(100% - 2em);
-				margin: 2em auto 0;
-				padding: 1em 1.5em;
-				border-radius: 12px;
-				background: rgb(var(--gray-light));
-			}
-			.series p {
-				margin: 0 0 0.5em 0;
-				font-weight: bold;
-			}
-			.series ol {
-				margin: 0;
-				padding-left: 1.25em;
-			}
-			.series li.current {
-				font-weight: bold;
-			}
-			.series a {
-				color: rgb(var(--gray-dark));
-			}
-			.series li.current a {
-				color: var(--accent);
-			}
-		</style>
 	</head>
 
-	<body data-zone="reading">
-		<ThresholdWhiteout />
-		<Header />
-		<main data-pagefind-body>
-			<article>
-				<div class="hero-image">
-					{heroImage && <Image width={1020} height={510} src={heroImage} alt="" />}
-				</div>
-				<div class="prose">
-					<div class="title">
-						<div class="date">
-							<FormattedDate date={pubDate} />
+	<body>
+		<DirectionalTransition />
+		<div id="world">
+			<div class="canvas-wrap" id="canvas-wrap" aria-hidden="true"></div>
+
+			<Nav />
+
+			<!--
+			  The body's paragraph text lives inside this near-opaque Reading Card
+			  (see CONTEXT.md) so it stays legible over the permanently-animated 3D
+			  background — the background is only visible at the card's edges and
+			  during page entry, never directly behind the copy.
+			-->
+			<main class="reading-card-wrap" data-pagefind-body>
+				<article class="reading-card">
+					<div class="hero-image">
+						{heroImage && <Image width={1020} height={510} src={heroImage} alt="" />}
+					</div>
+					<div class="prose">
+						<div class="title">
+							<div class="date">
+								<FormattedDate date={pubDate} />
+								{
+									updatedDate && (
+										<div class="last-updated-on">
+											Last updated on <FormattedDate date={updatedDate} />
+										</div>
+									)
+								}
+							</div>
+							<h1>{title}</h1>
 							{
-								updatedDate && (
-									<div class="last-updated-on">
-										Last updated on <FormattedDate date={updatedDate} />
+								tags && tags.length > 0 && (
+									<div class="tags" data-pagefind-ignore>
+										{tags.map((tag) => (
+											<a class="tag" href={`/tags/${tag}/`} data-nav-direction="right">
+												{tag}
+											</a>
+										))}
 									</div>
 								)
 							}
+							<CrackDivider />
 						</div>
-						<h1>{title}</h1>
 						{
-							tags && tags.length > 0 && (
-								<div class="tags" data-pagefind-ignore>
-									{tags.map((tag) => (
-										<a class="tag" href={`/tags/${tag}/`}>
-											{tag}
-										</a>
-									))}
+							series && seriesEntries.length > 0 && (
+								<div class="series" data-pagefind-ignore>
+									<p>
+										系列文章：《{series}》第 {seriesIndex + 1}/{seriesEntries.length} 篇
+									</p>
+									<ol>
+										{seriesEntries.map((entry, index) => (
+											<li class:list={{ current: index === seriesIndex }}>
+												{index === seriesIndex ? (
+													entry.data.title
+												) : (
+													<a href={`/blog/${entry.id}/`} data-nav-direction="right">
+														{entry.data.title}
+													</a>
+												)}
+											</li>
+										))}
+									</ol>
 								</div>
 							)
 						}
-						<CrackDivider />
+						<slot />
 					</div>
-					{
-						series && seriesEntries.length > 0 && (
-							<div class="series" data-pagefind-ignore>
-								<p>
-									系列文章：《{series}》第 {seriesIndex + 1}/{seriesEntries.length} 篇
-								</p>
-								<ol>
-									{seriesEntries.map((entry, index) => (
-										<li class:list={{ current: index === seriesIndex }}>
-											{index === seriesIndex ? (
-												entry.data.title
-											) : (
-												<a href={`/blog/${entry.id}/`}>{entry.data.title}</a>
-											)}
-										</li>
-									))}
-								</ol>
-							</div>
-						)
+				</article>
+			</main>
+		</div>
+
+		<script>
+			import * as THREE from 'three';
+			import {
+				ICE_WORLD_SEED,
+				createEnvMap,
+				createSkyMesh,
+				createSnowField,
+				createTerrain,
+				disposeObject3D,
+				supportsWebGL,
+				updateSkyMesh,
+				updateSnowField,
+			} from '../scripts/iceWorld';
+
+			function initIceScene() {
+				const canvasWrap = document.getElementById('canvas-wrap');
+				if (!canvasWrap) throw new Error('post page markup missing #canvas-wrap');
+
+				const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+				if (!supportsWebGL() || prefersReducedMotion) return;
+
+				const isMobile = window.innerWidth < 640;
+				const SEGMENTS = isMobile ? 40 : 56;
+				const SNOW_COUNT = isMobile ? 180 : 340;
+				const SIZE = 46;
+
+				const renderer = new THREE.WebGLRenderer({ antialias: true });
+				renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
+				renderer.setSize(window.innerWidth, window.innerHeight);
+				renderer.outputColorSpace = THREE.SRGBColorSpace;
+				renderer.toneMapping = THREE.ACESFilmicToneMapping;
+				renderer.toneMappingExposure = 1.1;
+				canvasWrap.appendChild(renderer.domElement);
+
+				const scene = new THREE.Scene();
+				scene.fog = new THREE.FogExp2(0x0a1522, 0.038);
+				const camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.1, 200);
+
+				function onResize() {
+					camera.aspect = window.innerWidth / window.innerHeight;
+					camera.updateProjectionMatrix();
+					renderer.setSize(window.innerWidth, window.innerHeight);
+				}
+				window.addEventListener('resize', onResize);
+
+				const skyMesh = createSkyMesh();
+				scene.add(skyMesh);
+
+				const envMap = createEnvMap(renderer, 128);
+				scene.environment = envMap;
+
+				const dirLight = new THREE.DirectionalLight(0xdbeeff, 1.5);
+				dirLight.position.set(8, 14, 6);
+				scene.add(dirLight);
+				scene.add(new THREE.AmbientLight(0x233d52, 0.55));
+				const rim = new THREE.PointLight(0x8a7cf0, 1.2, 40);
+				rim.position.set(10, 4, -8);
+				scene.add(rim);
+
+				// Different anchor/camera framing than the blog index and homepage
+				// (same fixed ICE_WORLD_SEED, same palette) — reads as a different
+				// vantage point over the same frozen lake, not a new place.
+				const anchor = new THREE.Group();
+				anchor.position.set(8, -4, -6);
+				scene.add(anchor);
+
+				const terrainMesh = createTerrain({
+					seed: ICE_WORLD_SEED,
+					size: SIZE,
+					segments: SEGMENTS,
+					envMap,
+				});
+				anchor.add(terrainMesh);
+
+				const snow = createSnowField({ count: SNOW_COUNT, size: SIZE, fallHeight: 16 });
+				anchor.add(snow.points);
+
+				camera.position.set(3, 9, 17);
+				camera.lookAt(6, -1, -3);
+
+				const clock = new THREE.Clock();
+				let rafId = 0;
+				function animate() {
+					rafId = requestAnimationFrame(animate);
+					const dt = clock.getDelta();
+					const elapsed = clock.getElapsedTime();
+
+					updateSkyMesh(skyMesh, elapsed);
+					updateSnowField(snow, dt, elapsed);
+					anchor.rotation.y = Math.sin(elapsed * 0.025) * 0.025;
+					rim.position.x = 10 + Math.sin(elapsed * 0.15) * 4;
+
+					renderer.render(scene, camera);
+				}
+				animate();
+
+				function disposeScene() {
+					cancelAnimationFrame(rafId);
+					window.removeEventListener('resize', onResize);
+					disposeObject3D(scene);
+					envMap.dispose();
+					renderer.dispose();
+					renderer.domElement.remove();
+					document.removeEventListener('astro:before-swap', disposeScene);
+					if ((window as any).__iceSceneCleanup === disposeScene) {
+						delete (window as any).__iceSceneCleanup;
 					}
-					<slot />
-				</div>
-			</article>
-		</main>
-		<Footer />
+				}
+				if ((window as any).__iceSceneCleanup) {
+					document.removeEventListener('astro:before-swap', (window as any).__iceSceneCleanup);
+				}
+				(window as any).__iceSceneCleanup = disposeScene;
+				document.addEventListener('astro:before-swap', disposeScene);
+			}
+
+			(window as any).__initIceScene = initIceScene;
+			initIceScene();
+		</script>
+
+		<script data-astro-rerun>
+			if (typeof window.__initIceScene === 'function') {
+				window.__initIceScene();
+			}
+		</script>
 	</body>
 </html>
+
+<style>
+	#world {
+		background: #04070d;
+		overflow: hidden;
+	}
+
+	.canvas-wrap {
+		position: fixed;
+		inset: 0;
+		z-index: 0;
+	}
+	.canvas-wrap :global(canvas) {
+		display: block;
+	}
+
+	.reading-card-wrap {
+		position: relative;
+		z-index: 3;
+		width: auto;
+		max-width: 100%;
+		margin: 0;
+		padding: 1rem clamp(1rem, 4vw, 3rem) 6rem;
+	}
+
+	.reading-card {
+		max-width: 760px;
+		margin: 2vh auto 0;
+		background: rgba(6, 10, 16, 94%);
+		border: 1px solid rgba(242, 251, 255, 12%);
+		backdrop-filter: blur(8px);
+		box-shadow: 0 30px 80px rgba(0, 0, 0, 55%);
+		padding: 0 0 2.5rem;
+	}
+
+	.hero-image img {
+		display: block;
+		width: 100%;
+		margin: 0;
+	}
+	.prose {
+		width: 720px;
+		max-width: calc(100% - 3em);
+		margin: auto;
+		padding: 0 1em;
+		color: rgb(var(--gray-dark));
+	}
+	.title {
+		margin-bottom: 1em;
+		padding: 1em 0;
+		text-align: center;
+		line-height: 1;
+	}
+	.title h1 {
+		margin: 0 0 0.5em 0;
+	}
+	.date {
+		margin-bottom: 0.5em;
+		color: rgb(var(--gray));
+	}
+	.last-updated-on {
+		font-style: italic;
+	}
+	.tags {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: center;
+		gap: 0.5em;
+		margin-top: 0.75em;
+	}
+	.tag {
+		padding: 0.25em 0.75em;
+		border-radius: 999px;
+		background: rgb(var(--gray-light));
+		color: rgb(var(--gray-dark));
+		font-size: 0.8em;
+		text-decoration: none;
+	}
+	.tag:hover {
+		color: var(--accent);
+	}
+	.series {
+		width: 720px;
+		max-width: calc(100% - 2em);
+		margin: 2em auto 0;
+		padding: 1em 1.5em;
+		border-radius: 12px;
+		background: rgb(var(--gray-light));
+	}
+	.series p {
+		margin: 0 0 0.5em 0;
+		font-weight: bold;
+	}
+	.series ol {
+		margin: 0;
+		padding-left: 1.25em;
+	}
+	.series li.current {
+		font-weight: bold;
+	}
+	.series a {
+		color: rgb(var(--gray-dark));
+	}
+	.series li.current a {
+		color: var(--accent);
+	}
+</style>

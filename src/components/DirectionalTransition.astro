@@ -1,0 +1,174 @@
+---
+// The Directional Transition (see CONTEXT.md) that replaced Threshold
+// Transition once the whole site became one Continuous World: instead of a
+// whiteout dive at the (now-gone) Immersive/Reading Zone boundary, every
+// navigation slides the page's #world wrapper in a fixed direction, standing
+// in for movement through one contiguous space.
+//
+// Rendered on every page, right after <body>. Delegates clicks on any
+// [data-nav-direction] link (nav tabs, Floe cards, tag pills) rather than
+// requiring each page to wire up its own handler.
+---
+
+<script>
+	import { navigate } from 'astro:transitions/client';
+
+	type Direction = 'up' | 'down' | 'left' | 'right';
+
+	// Content depth moves right (list -> post, post -> tag list); nav-tab
+	// clicks always slide straight to that tab's canonical direction from
+	// Home, never a multi-step reverse of however the current page was
+	// reached — see CONTEXT.md's Directional Transition entry.
+	const EXIT_CLASS: Record<Direction, string> = {
+		down: 'mm-exit-top',
+		right: 'mm-exit-left',
+		up: 'mm-exit-bottom',
+		left: 'mm-exit-right',
+	};
+	const ENTER_CLASS: Record<Direction, string> = {
+		down: 'mm-enter-from-bottom',
+		right: 'mm-enter-from-right',
+		up: 'mm-enter-from-top',
+		left: 'mm-enter-from-left',
+	};
+	const STORAGE_KEY = 'mm:entry-direction';
+
+	const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+	const TRANSITION_MS = prefersReducedMotion ? 0 : 520;
+
+	let transitioning = false;
+
+	function directionalNavigate(direction: string, href: string) {
+		if (transitioning) return;
+		const exitClass = EXIT_CLASS[direction as Direction];
+		if (!exitClass) return;
+		transitioning = true;
+		const world = document.getElementById('world');
+		sessionStorage.setItem(STORAGE_KEY, direction);
+		if (world) world.classList.add(exitClass);
+		window.setTimeout(() => navigate(href), TRANSITION_MS);
+	}
+	// Exposed so page-specific markup (nav tabs, Floe cards, tag pills) can
+	// all drive the same transition via a single delegated click handler.
+	(window as unknown as { __mmDirectionalNavigate: typeof directionalNavigate }).__mmDirectionalNavigate =
+		directionalNavigate;
+
+	function onClick(event: MouseEvent) {
+		if (event.defaultPrevented || event.button !== 0) return;
+		if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+		const target = event.target;
+		const anchor =
+			target instanceof Element ? target.closest<HTMLAnchorElement>('a[data-nav-direction]') : null;
+		if (!anchor) return;
+		if (anchor.target === '_blank') return;
+		if (anchor.pathname === window.location.pathname) return;
+		event.preventDefault();
+		directionalNavigate(anchor.dataset.navDirection ?? '', anchor.href);
+	}
+	document.addEventListener('click', onClick, true);
+
+	function playEntrance() {
+		transitioning = false;
+		const world = document.getElementById('world');
+		const direction = sessionStorage.getItem(STORAGE_KEY);
+		sessionStorage.removeItem(STORAGE_KEY);
+		if (!world || !direction) return;
+		const enterClass = ENTER_CLASS[direction as Direction];
+		if (!enterClass) return;
+		world.classList.add(enterClass);
+		world.addEventListener('animationend', () => world.classList.remove(enterClass), { once: true });
+	}
+	document.addEventListener('astro:page-load', playEntrance);
+</script>
+
+<style is:global>
+	#world {
+		position: relative;
+		min-height: 100vh;
+	}
+
+	#world.mm-exit-top {
+		animation: mm-slide-out-top 0.52s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+	}
+	#world.mm-exit-bottom {
+		animation: mm-slide-out-bottom 0.52s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+	}
+	#world.mm-exit-left {
+		animation: mm-slide-out-left 0.52s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+	}
+	#world.mm-exit-right {
+		animation: mm-slide-out-right 0.52s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+	}
+	#world.mm-enter-from-top {
+		animation: mm-slide-in-from-top 0.52s cubic-bezier(0.16, 1, 0.3, 1) both;
+	}
+	#world.mm-enter-from-bottom {
+		animation: mm-slide-in-from-bottom 0.52s cubic-bezier(0.16, 1, 0.3, 1) both;
+	}
+	#world.mm-enter-from-left {
+		animation: mm-slide-in-from-left 0.52s cubic-bezier(0.16, 1, 0.3, 1) both;
+	}
+	#world.mm-enter-from-right {
+		animation: mm-slide-in-from-right 0.52s cubic-bezier(0.16, 1, 0.3, 1) both;
+	}
+
+	@keyframes mm-slide-out-top {
+		to {
+			transform: translateY(-100%);
+		}
+	}
+	@keyframes mm-slide-out-bottom {
+		to {
+			transform: translateY(100%);
+		}
+	}
+	@keyframes mm-slide-out-left {
+		to {
+			transform: translateX(-100%);
+		}
+	}
+	@keyframes mm-slide-out-right {
+		to {
+			transform: translateX(100%);
+		}
+	}
+	@keyframes mm-slide-in-from-top {
+		from {
+			transform: translateY(-100%);
+		}
+		to {
+			transform: translateY(0);
+		}
+	}
+	@keyframes mm-slide-in-from-bottom {
+		from {
+			transform: translateY(100%);
+		}
+		to {
+			transform: translateY(0);
+		}
+	}
+	@keyframes mm-slide-in-from-left {
+		from {
+			transform: translateX(-100%);
+		}
+		to {
+			transform: translateX(0);
+		}
+	}
+	@keyframes mm-slide-in-from-right {
+		from {
+			transform: translateX(100%);
+		}
+		to {
+			transform: translateX(0);
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		#world[class*='mm-exit-'],
+		#world[class*='mm-enter-'] {
+			animation: none !important;
+		}
+	}
+</style>

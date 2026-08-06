@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mechanical Meteor — Blog 列表頁（3D 延續版）</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body { background:#04070d; }
+  body { font-family:'Inter',sans-serif; color:#f2fbff; }
+
+  #bg-canvas-wrap { position: fixed; inset: 0; z-index: 0; }
+  canvas { display: block; }
+
+  .scrim {
+    position: fixed; inset: 0; z-index: 1;
+    background: linear-gradient(180deg,
+      rgba(4,7,13,0.15) 0%,
+      rgba(4,7,13,0.55) 38%,
+      rgba(4,7,13,0.86) 62%,
+      rgba(4,7,13,0.96) 100%);
+    pointer-events: none;
+  }
+
+  nav {
+    position: relative; z-index: 3;
+    display:flex; justify-content:space-between; align-items:center;
+    padding: 1.8rem clamp(1.2rem, 5vw, 4rem);
+    font-size:0.85rem; letter-spacing:0.06em;
+  }
+  nav .logo { font-weight:600; text-shadow: 0 2px 20px rgba(4,7,13,0.8); }
+  nav .links { display:flex; gap:2rem; }
+  nav .links a { color:#dceaf2; text-decoration:none; opacity:0.85; transition:opacity 0.3s;
+    text-shadow: 0 2px 20px rgba(4,7,13,0.8); }
+  nav .links a:hover { opacity:1; color:#3ee6c4; }
+
+  .page-header {
+    position: relative; z-index:3;
+    padding: 8vh clamp(1.2rem, 5vw, 4rem) 1rem;
+    max-width: 1100px; margin: 0 auto;
+  }
+  .eyebrow { font-size:0.76rem; letter-spacing:0.15em; color:#3ee6c4; margin-bottom:0.8rem;
+    display:inline-flex; align-items:center; gap:0.6rem; text-shadow: 0 2px 20px rgba(4,7,13,0.9); }
+  .eyebrow::before { content:''; width:22px; height:1px; background:#3ee6c4; }
+  .page-title {
+    font-family:'Noto Serif TC', serif; font-weight:700;
+    font-size: clamp(1.8rem, 4.2vw, 2.8rem);
+    text-shadow: 0 2px 30px rgba(4,7,13,0.9);
+  }
+  .page-sub { margin-top:0.8rem; color:#cfe4ee; font-weight:300; font-size:0.95rem; max-width:34em;
+    text-shadow: 0 2px 20px rgba(4,7,13,0.9); }
+
+  .grid {
+    position: relative; z-index:3;
+    max-width: 1100px; margin: 4rem auto 8rem;
+    padding: 0 clamp(1.2rem, 5vw, 4rem);
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 2.2rem 1.8rem;
+  }
+
+  .floe {
+    position: relative;
+    padding: 1.5rem 1.7rem 1.7rem;
+    background: rgba(6,10,16,0.5);
+    border: 1px solid rgba(242,251,255,0.14);
+    backdrop-filter: blur(14px);
+    cursor: pointer;
+    transition: transform 0.45s cubic-bezier(0.16,1,0.3,1), box-shadow 0.45s ease, border-color 0.4s ease;
+  }
+  .floe:nth-child(6n+1) { clip-path: polygon(0 6%, 93% 0, 100% 88%, 10% 100%, 0 62%); transform: rotate(-0.6deg); }
+  .floe:nth-child(6n+2) { clip-path: polygon(4% 0, 100% 4%, 96% 100%, 0 94%); transform: rotate(0.4deg) translateY(6px); }
+  .floe:nth-child(6n+3) { clip-path: polygon(0 10%, 90% 0, 100% 82%, 14% 100%, 0 55%); transform: rotate(0.7deg); }
+  .floe:nth-child(6n+4) { clip-path: polygon(6% 0, 100% 8%, 94% 100%, 0 90%); transform: rotate(-0.3deg) translateY(-4px); }
+  .floe:nth-child(6n+5) { clip-path: polygon(0 4%, 96% 0, 100% 92%, 8% 100%, 0 68%); transform: rotate(0.3deg); }
+  .floe:nth-child(6n+6) { clip-path: polygon(3% 0, 100% 6%, 97% 100%, 0 96%); transform: rotate(-0.5deg) translateY(4px); }
+
+  .floe:hover {
+    transform: translateY(-6px) rotate(0deg) !important;
+    border-color: rgba(62,230,196,0.4);
+    box-shadow: 0 16px 44px rgba(62,230,196,0.16);
+  }
+  .floe .tag { font-size:0.7rem; letter-spacing:0.1em; color:#3ee6c4; margin-bottom:0.7rem; }
+  .floe .title { font-family:'Noto Serif TC', serif; font-weight:600; font-size:1.1rem; line-height:1.6; }
+  .floe .excerpt { margin-top:0.7rem; font-size:0.86rem; color:#a9c4d4; line-height:1.7; }
+  .floe .meta { margin-top:1.1rem; font-size:0.74rem; color:#6c8ea1; }
+
+  .loading {
+    position: fixed; inset:0; z-index: 10;
+    background:#04070d;
+    display:flex; align-items:center; justify-content:center;
+    font-size:0.85rem; letter-spacing:0.1em; color:#7ea8bf;
+    transition: opacity 0.6s ease;
+  }
+</style>
+</head>
+<body>
+
+<div class="loading" id="loading">正在載入冰原地形…</div>
+
+<div id="bg-canvas-wrap"></div>
+<div class="scrim"></div>
+
+<nav>
+  <div class="logo">Mechanical Meteor</div>
+  <div class="links">
+    <a href="#">Home</a>
+    <a href="#" style="color:#3ee6c4;">Blog</a>
+    <a href="#">About</a>
+  </div>
+</nav>
+
+<div class="page-header">
+  <div class="eyebrow">如履薄冰 · ALL ARTICLES</div>
+  <h1 class="page-title">文章列表</h1>
+  <p class="page-sub">一片一片浮冰，記錄那些走過的、還沒走穩的、以及正在結凍的念頭。</p>
+</div>
+
+<div class="grid" id="grid"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function () {
+  const wrap = document.getElementById('bg-canvas-wrap');
+  const loading = document.getElementById('loading');
+
+  function makePerlin(seed) {
+    const perm = new Uint8Array(256);
+    for (let i = 0; i < 256; i++) perm[i] = i;
+    let s = seed || 1;
+    function rand() { s = (s * 9301 + 49297) % 233280; return s / 233280; }
+    for (let i = 255; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); const t = perm[i]; perm[i] = perm[j]; perm[j] = t; }
+    const p = new Uint8Array(512);
+    for (let i = 0; i < 512; i++) p[i] = perm[i & 255];
+    function fade(t) { return t * t * t * (t * (t * 6 - 15) + 10); }
+    function lerp(a, b, t) { return a + t * (b - a); }
+    function grad(hash, x, y) { const h = hash & 7; const u = h < 4 ? x : y, v = h < 4 ? y : x; return ((h & 1) ? -u : u) + ((h & 2) ? -2 * v : 2 * v); }
+    return function noise(x, y) {
+      const X = Math.floor(x) & 255, Y = Math.floor(y) & 255;
+      x -= Math.floor(x); y -= Math.floor(y);
+      const u = fade(x), v = fade(y);
+      const aa = p[p[X] + Y], ab = p[p[X] + Y + 1], ba = p[p[X + 1] + Y], bb = p[p[X + 1] + Y + 1];
+      return lerp(lerp(grad(aa, x, y), grad(ba, x - 1, y), u), lerp(grad(ab, x, y - 1), grad(bb, x - 1, y - 1), u), v);
+    };
+  }
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.1;
+  wrap.appendChild(renderer.domElement);
+
+  const scene = new THREE.Scene();
+  scene.fog = new THREE.FogExp2(0x0a1522, 0.038);
+  const camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.1, 200);
+
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+
+  function makeSkyMesh() {
+    const geo = new THREE.SphereGeometry(80, 20, 20);
+    const mat = new THREE.ShaderMaterial({
+      uniforms: {
+        time: { value: 0 },
+        topColor: { value: new THREE.Color(0x142338) },
+        bottomColor: { value: new THREE.Color(0x04070d) },
+        auroraA: { value: new THREE.Color(0x3ee6c4) },
+        auroraB: { value: new THREE.Color(0x8a7cf0) }
+      },
+      vertexShader: `varying vec3 vPos; void main(){ vPos=position; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
+      fragmentShader: `
+        varying vec3 vPos; uniform float time; uniform vec3 topColor,bottomColor,auroraA,auroraB;
+        void main(){
+          float h = normalize(vPos).y*0.5+0.5;
+          vec3 base = mix(bottomColor, topColor, h);
+          float band = sin(vPos.x*0.05+time*0.1)*0.5+0.5;
+          band *= smoothstep(0.15,0.75,h)*smoothstep(1.0,0.6,h);
+          vec3 aurora = mix(auroraA, auroraB, sin(vPos.z*0.04+time*0.08)*0.5+0.5);
+          gl_FragColor = vec4(base + aurora*band*0.3, 1.0);
+        }`,
+      side: THREE.BackSide
+    });
+    return new THREE.Mesh(geo, mat);
+  }
+  const skyMesh = makeSkyMesh();
+  scene.add(skyMesh);
+
+  function buildEnvMap() {
+    const envScene = new THREE.Scene();
+    envScene.add(makeSkyMesh());
+    const dl = new THREE.DirectionalLight(0xcfe9f5, 1.3);
+    dl.position.set(6, 10, 4);
+    envScene.add(dl);
+    envScene.add(new THREE.AmbientLight(0x2a3f52, 0.7));
+    const cubeRT = new THREE.WebGLCubeRenderTarget(128, { format: THREE.RGBFormat, generateMipmaps: true, minFilter: THREE.LinearMipmapLinearFilter });
+    const cubeCam = new THREE.CubeCamera(0.1, 100, cubeRT);
+    envScene.add(cubeCam);
+    cubeCam.update(renderer, envScene);
+    return cubeRT.texture;
+  }
+  const envMap = buildEnvMap();
+  scene.environment = envMap;
+
+  const dirLight = new THREE.DirectionalLight(0xdbeeff, 1.5);
+  dirLight.position.set(8, 14, 6);
+  scene.add(dirLight);
+  scene.add(new THREE.AmbientLight(0x233d52, 0.55));
+  const rim = new THREE.PointLight(0x3ee6c4, 1.2, 40);
+  rim.position.set(-10, 4, -8);
+  scene.add(rim);
+
+  // ---------- anchor group: shifted so terrain sits lower-left,
+  // leaving open sky/aurora area top-right for the readable text zone ----------
+  const anchor = new THREE.Group();
+  anchor.position.set(-9, -3, 4);
+  scene.add(anchor);
+
+  const SIZE = 46, SEGMENTS = 64; // lighter than hero — this page is for browsing, not exploring
+  const noise = makePerlin(77.3);
+  const geo = new THREE.PlaneGeometry(SIZE, SIZE, SEGMENTS, SEGMENTS);
+  geo.rotateX(-Math.PI / 2);
+  const pos = geo.attributes.position;
+  const colors = new Float32Array(pos.count * 3);
+  const cA = new THREE.Color(0x0b2032), cB = new THREE.Color(0xeaf7ff), cTeal = new THREE.Color(0x3ee6c4);
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i), z = pos.getZ(i);
+    let h = 0, amp = 1, freq = 0.045, norm = 0;
+    for (let o = 0; o < 4; o++) { h += noise(x * freq, z * freq) * amp; norm += amp; amp *= 0.5; freq *= 2; }
+    h /= norm;
+    const ridgeN = noise(x * 0.09 + 50, z * 0.09 - 50);
+    const ridge = Math.pow(1 - Math.abs(ridgeN), 4);
+    const height = h * 2.4 + ridge * 1.1;
+    pos.setY(i, height);
+    const t = THREE.MathUtils.clamp((height + 1.6) / 3.2, 0, 1);
+    const c = cA.clone().lerp(cB, t);
+    if (ridge > 0.5) c.lerp(cTeal, (ridge - 0.5) * 0.5);
+    colors[i * 3] = c.r; colors[i * 3 + 1] = c.g; colors[i * 3 + 2] = c.b;
+  }
+  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  geo.computeVertexNormals();
+  const mat = new THREE.MeshPhysicalMaterial({
+    vertexColors: true, roughness: 0.32, metalness: 0.04, transmission: 0.5,
+    thickness: 1.3, ior: 1.31, clearcoat: 0.55, clearcoatRoughness: 0.2,
+    envMap: envMap, envMapIntensity: 1.2, side: THREE.DoubleSide
+  });
+  const terrainMesh = new THREE.Mesh(geo, mat);
+  anchor.add(terrainMesh);
+
+  function makeSnowTexture() {
+    const c = document.createElement('canvas'); c.width = c.height = 64;
+    const ctx = c.getContext('2d');
+    const g = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+    g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.4, 'rgba(255,255,255,0.7)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, 64, 64);
+    return new THREE.CanvasTexture(c);
+  }
+  const COUNT = window.innerWidth < 640 ? 260 : 500;
+  const snowGeo = new THREE.BufferGeometry();
+  const positions = new Float32Array(COUNT * 3);
+  const velocities = new Float32Array(COUNT);
+  for (let i = 0; i < COUNT; i++) {
+    positions[i * 3] = (Math.random() - 0.5) * SIZE;
+    positions[i * 3 + 1] = Math.random() * 16;
+    positions[i * 3 + 2] = (Math.random() - 0.5) * SIZE;
+    velocities[i] = 0.3 + Math.random() * 0.5;
+  }
+  snowGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  const snowMat = new THREE.PointsMaterial({ size: 0.14, map: makeSnowTexture(), transparent: true, depthWrite: false, sizeAttenuation: true, opacity: 0.75, color: 0xffffff });
+  const snowPoints = new THREE.Points(snowGeo, snowMat);
+  anchor.add(snowPoints);
+
+  // ---------- fixed composition: camera pulled up + left + back,
+  // tilted down toward the terrain corner so most of the frame
+  // is open sky/aurora — the "safe zone" for the text/grid overlay ----------
+  camera.position.set(-2, 11, 16);
+  camera.lookAt(-6, -1, 2);
+
+  const clock = new THREE.Clock();
+  function animate() {
+    requestAnimationFrame(animate);
+    const dt = clock.getDelta();
+    const elapsed = clock.getElapsedTime();
+    skyMesh.material.uniforms.time.value = elapsed;
+
+    const posAttr = snowGeo.attributes.position;
+    for (let i = 0; i < COUNT; i++) {
+      let y = posAttr.array[i * 3 + 1] - velocities[i] * dt * 1.2;
+      if (y < -1) y = 15 + Math.random() * 2;
+      posAttr.array[i * 3 + 1] = y;
+    }
+    posAttr.needsUpdate = true;
+
+    anchor.rotation.y = Math.sin(elapsed * 0.03) * 0.03;
+    rim.position.x = -10 + Math.sin(elapsed * 0.15) * 4;
+
+    renderer.render(scene, camera);
+  }
+  animate();
+
+  loading.style.opacity = '0';
+  setTimeout(() => { loading.style.display = 'none'; }, 500);
+})();
+</script>
+
+<script>
+  const posts = [
+    { tag:"隨筆 · 如履薄冰", title:"在裂縫還沒蔓延之前，我學會了慢慢走", excerpt:"那天湖面看起來很穩，但我知道冰層底下的水還在流動……", meta:"2026.08 · 4 分鐘" },
+    { tag:"技術筆記", title:"當 SSO 遇上冰封的 localStorage：跨網域 session 的裂痕", excerpt:"問題不是 cookie 本身，是我一直以為它跟我站在同一塊冰上……", meta:"2026.07 · 6 分鐘" },
+    { tag:"側寫", title:"用 AI 寫一首歌，然後看它融化在串流平台裡", excerpt:"Content ID 認不出它，但聽眾聽得出來——這算不算一種存在？", meta:"2026.07 · 5 分鐘" },
+    { tag:"架構思考", title:"先蓋共享服務，再蓋城堡：模組化的順序problem", excerpt:"Auth、billing、i18n 先行，是穩，還是只是拖延核心決策？", meta:"2026.06 · 7 分鐘" },
+    { tag:"隨筆", title:"薄冰底下沒有答案，只有下一步", excerpt:"我一直在找一個「安全」的定義，後來發現它根本不存在……", meta:"2026.06 · 3 分鐘" },
+    { tag:"技術筆記", title:"Supply chain 攻擊來的那天，我在確認每一個 hash", excerpt:"信任是最貴的資產，也是最容易被悄悄挪用的一種……", meta:"2026.05 · 5 分鐘" }
+  ];
+  const grid = document.getElementById('grid');
+  posts.forEach(p => {
+    const el = document.createElement('div');
+    el.className = 'floe';
+    el.innerHTML = `<div class="tag">${p.tag}</div><div class="title">${p.title}</div><div class="excerpt">${p.excerpt}</div><div class="meta">${p.meta}</div>`;
+    grid.appendChild(el);
+  });
+</script>
+
+</body>
+</html>

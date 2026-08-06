@@ -34,6 +34,7 @@ const { title, description, image = FallbackImage } = Astro.props;
 <meta name="generator" content={Astro.generator} />
 
 <Font cssVariable="--font-atkinson" preload />
+<Font cssVariable="--font-noto-serif-tc" preload />
 
 <!-- Canonical URL -->
 <link rel="canonical" href={canonicalURL} />
@@ -54,10 +55,9 @@ const { title, description, image = FallbackImage } = Astro.props;
 
 <!--
   Site-wide client-side routing (required by the View Transitions API — it
-  cannot be scoped to a subset of routes). The custom "Threshold Transition"
-  that plays only when crossing the Immersive <-> Reading Zone boundary is
-  defined entirely in CSS in global.css, keyed off [data-zone="immersive"]
-  on the page root; every other navigation falls through to Astro's default
-  fade. See CONTEXT.md.
+  cannot be scoped to a subset of routes). Directional Transition (see
+  CONTEXT.md and DirectionalTransition.astro) uses navigate() from
+  astro:transitions/client after a CSS slide, so every page needs this
+  enabled regardless of which direction the slide plays.
 -->
 <ClientRouter />
