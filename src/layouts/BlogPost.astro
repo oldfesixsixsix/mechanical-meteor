@@ -250,9 +250,12 @@ const seriesIndex = seriesEntries.findIndex((entry) => entry.id === id);
 	.reading-card {
 		max-width: 760px;
 		margin: 2vh auto 0;
-		background: rgba(6, 10, 16, 94%);
-		border: 1px solid rgba(242, 251, 255, 12%);
-		backdrop-filter: blur(8px);
+		/* Glass, not a solid panel — same low-opacity tint as the Floe Cards
+		   (see CONTEXT.md's Reading Card entry), just a stronger blur since
+		   this one holds long-form paragraphs rather than a card label. */
+		background: rgba(var(--black), 7%);
+		border: 1px solid rgba(var(--black), 16%);
+		backdrop-filter: blur(22px);
 		box-shadow: 0 30px 80px rgba(0, 0, 0, 55%);
 		padding: 0 0 2.5rem;
 	}

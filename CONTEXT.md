@@ -28,12 +28,15 @@ utility module. Moving between pages plays a *Directional Transition* rather
 than a hard cut, reinforcing the illusion of one contiguous place.
 
 ### Reading Card
-The near-opaque panel that long-form body text (blog post body, About page
-body) is contained in, so paragraph text stays legible over the
-now-permanently-animated *Continuous World* background. The 3D scene stays
-visible at the card's edges and during page entry, never directly behind body
-copy. Successor to the Reading Zone's "no decorative artwork behind text"
-concern, scoped down to the card rather than the whole page.
+The glass panel that long-form body text (blog post body, About page body) is
+contained in: the same low-opacity tint as a *Floe Card*, with a stronger
+blur (legibility cushion for paragraphs rather than a card label) so the
+*Continuous World* background stays visible through it rather than being
+hidden behind a solid panel. Revised from an earlier near-opaque version once
+seeing it in the browser made the tradeoff concrete — visibility of the 3D
+scene through the reading surface won out over maximum text contrast.
+Successor to the Reading Zone's "no decorative artwork behind text" concern,
+scoped down to the card rather than the whole page.
 
 ### Floe Card
 The pure-text card design for blog-index and tag-filtered-list entries:

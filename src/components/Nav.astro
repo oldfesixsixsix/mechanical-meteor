@@ -1,13 +1,12 @@
 ---
 // The site-wide minimal nav for the Continuous World (see CONTEXT.md):
-// logo + Home/Blog/About, replacing the old Header/Footer chrome everywhere.
+// just the Home/Blog/About tab links, floating directly over the 3D scene —
+// no bar/logo container, so there's no separate header-like band behind it.
 // Each link's data-nav-direction is its fixed canonical direction from Home;
 // DirectionalTransition.astro's global click delegate reads it directly, so
 // clicking any tab from any depth always plays one direct slide to that
 // direction, never a multi-step reverse of however the current page was
 // reached.
-import { SITE_TITLE } from '../consts';
-
 const path = Astro.url.pathname;
 const isHome = path === '/';
 const isBlog = path.startsWith('/blog') || path.startsWith('/tags');
@@ -15,12 +14,9 @@ const isAbout = path.startsWith('/about');
 ---
 
 <nav class="mm-nav">
-	<a class="mm-nav-logo" href="/" data-nav-direction="up">{SITE_TITLE}</a>
-	<div class="mm-nav-links">
-		<a href="/" data-nav-direction="up" aria-current={isHome ? 'page' : undefined}>Home</a>
-		<a href="/blog" data-nav-direction="down" aria-current={isBlog ? 'page' : undefined}>Blog</a>
-		<a href="/about" data-nav-direction="left" aria-current={isAbout ? 'page' : undefined}>About</a>
-	</div>
+	<a href="/" data-nav-direction="up" aria-current={isHome ? 'page' : undefined}>Home</a>
+	<a href="/blog" data-nav-direction="down" aria-current={isBlog ? 'page' : undefined}>Blog</a>
+	<a href="/about" data-nav-direction="left" aria-current={isAbout ? 'page' : undefined}>About</a>
 </nav>
 
 <style>
@@ -28,31 +24,21 @@ const isAbout = path.startsWith('/about');
 		position: relative;
 		z-index: 5;
 		display: flex;
-		justify-content: space-between;
-		align-items: center;
+		justify-content: flex-end;
+		gap: 2rem;
 		padding: 1.8rem clamp(1.2rem, 5vw, 4rem);
 		font-size: 0.85rem;
 		letter-spacing: 0.06em;
 	}
-	.mm-nav-logo {
-		font-weight: 600;
-		color: rgb(var(--black));
-		text-decoration: none;
-		text-shadow: 0 2px 20px rgba(4, 7, 13, 80%);
-	}
-	.mm-nav-links {
-		display: flex;
-		gap: 2rem;
-	}
-	.mm-nav-links a {
+	.mm-nav a {
 		color: rgb(var(--gray-dark));
 		text-decoration: none;
 		opacity: 0.85;
 		transition: opacity 0.3s;
 		text-shadow: 0 2px 20px rgba(4, 7, 13, 80%);
 	}
-	.mm-nav-links a:hover,
-	.mm-nav-links a[aria-current='page'] {
+	.mm-nav a:hover,
+	.mm-nav a[aria-current='page'] {
 		opacity: 1;
 		color: var(--accent);
 	}

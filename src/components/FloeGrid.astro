@@ -47,8 +47,10 @@ const { posts } = Astro.props;
 		display: block;
 		position: relative;
 		padding: 1.5rem 1.7rem 1.7rem;
-		background: rgba(6, 10, 16, 50%);
-		border: 1px solid rgba(242, 251, 255, 14%);
+		/* Same glass treatment as the homepage's "最新一篇" floe card — a
+		   near-transparent tint, not a dark panel. */
+		background: rgba(var(--black), 7%);
+		border: 1px solid rgba(var(--black), 16%);
 		backdrop-filter: blur(14px);
 		text-decoration: none;
 		color: inherit;

@@ -22,18 +22,21 @@ const latestPost = posts[0];
 	<body>
 		<DirectionalTransition />
 		<div id="world">
+			<!--
+			  The canvas sits fixed behind the whole page — including the nav — so
+			  there's no separate flat-background band behind Nav.astro; the nav
+			  floats directly over the 3D scene, same as every other page's
+			  IceBackground.astro. This markup IS the fallback (dark background,
+			  real headline, a real link) by construction — the WebGL setup script
+			  below only ever *adds* a canvas into #canvas-wrap when WebGL is
+			  available and prefers-reduced-motion isn't set.
+			-->
+			<div class="canvas-wrap" id="canvas-wrap" aria-hidden="true"></div>
+
 			<Nav />
 
-			<!--
-			  Home's own room in the Continuous World (see CONTEXT.md). This markup
-			  IS the fallback (dark background, real headline, a real link) by
-			  construction — the WebGL setup script below only ever *adds* a canvas
-			  into #canvas-wrap when WebGL is available and prefers-reduced-motion
-			  isn't set. There is no separate fallback tree to keep in sync.
-			-->
+			<!-- Home's own room in the Continuous World (see CONTEXT.md). -->
 			<main class="ice-hero" id="ice-hero">
-				<div class="canvas-wrap" id="canvas-wrap" aria-hidden="true"></div>
-
 				<div class="overlay">
 					<div class="bottom-bar">
 						<div class="headline">
@@ -306,6 +309,19 @@ const latestPost = posts[0];
 </html>
 
 <style>
+	#world {
+		background: rgb(var(--bg));
+	}
+
+	.canvas-wrap {
+		position: fixed;
+		inset: 0;
+		z-index: 0;
+	}
+	.canvas-wrap :global(canvas) {
+		display: block;
+	}
+
 	.ice-hero {
 		position: relative;
 		width: 100%;
@@ -316,15 +332,6 @@ const latestPost = posts[0];
 		overflow: hidden;
 		background: linear-gradient(180deg, rgb(var(--surface)) 0%, rgb(var(--bg)) 100%);
 		color: rgb(var(--black));
-	}
-
-	.canvas-wrap {
-		position: absolute;
-		inset: 0;
-		z-index: 0;
-	}
-	.canvas-wrap :global(canvas) {
-		display: block;
 	}
 
 	.overlay {
