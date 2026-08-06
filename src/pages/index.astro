@@ -309,8 +309,15 @@ const latestPost = posts[0];
 </html>
 
 <style>
+	/* This is the fallback background for when WebGL/prefers-reduced-motion
+	   rules out the canvas — it must live on #world, not .ice-hero, now that
+	   canvas-wrap is a fixed sibling painted before .ice-hero in DOM order.
+	   .ice-hero staying transparent is what lets the canvas show through the
+	   full page height (including behind Nav) when the scene does render;
+	   putting an opaque background back on .ice-hero would paint over the
+	   canvas everywhere .ice-hero's box extends, hiding the animation again. */
 	#world {
-		background: rgb(var(--bg));
+		background: linear-gradient(180deg, rgb(var(--surface)) 0%, rgb(var(--bg)) 100%);
 	}
 
 	.canvas-wrap {
@@ -330,7 +337,6 @@ const latestPost = posts[0];
 		margin: 0;
 		padding: 0;
 		overflow: hidden;
-		background: linear-gradient(180deg, rgb(var(--surface)) 0%, rgb(var(--bg)) 100%);
 		color: rgb(var(--black));
 	}
 
