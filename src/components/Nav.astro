@@ -14,9 +14,9 @@ const isSettings = path.startsWith('/settings');
 ---
 
 <nav class="mm-nav">
-	<a href="/" aria-current={isHome ? 'page' : undefined}>Home</a>
-	<a href="/blog" aria-current={isBlog ? 'page' : undefined}>Blog</a>
-	<a href="/about" aria-current={isAbout ? 'page' : undefined}>About</a>
+	<a href="/" data-sfx="tab" aria-current={isHome ? 'page' : undefined}>Home</a>
+	<a href="/blog" data-sfx="tab" aria-current={isBlog ? 'page' : undefined}>Blog</a>
+	<a href="/about" data-sfx="tab" aria-current={isAbout ? 'page' : undefined}>About</a>
 	<SearchModal />
 	<a href="/settings" class="mm-nav-icon" aria-current={isSettings ? 'page' : undefined} aria-label="設定">
 		<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8">

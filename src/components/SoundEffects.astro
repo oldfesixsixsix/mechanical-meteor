@@ -1,0 +1,69 @@
+---
+// One-shot UI click sounds (see CONTEXT.md), independent of the Ambient
+// Soundtrack's on/off state (AmbientAudio.astro) — controlled by its own
+// mm:sfx-enabled toggle on /settings via window.__mmSetSfxEnabled.
+//
+// A single delegated click listener (same shape as the retired
+// DirectionalTransition.astro's click delegate) reads which sound to play
+// off a data-sfx attribute rather than requiring every trigger site to wire
+// up its own handler:
+// - data-sfx="tab"     — Nav.astro's Home/Blog/About tabs only, not the
+//                        settings/search icons (those open a panel, they
+//                        don't switch to another "room")
+// - data-sfx="article" — links that enter a post: FloeGrid card links, the
+//                        homepage's "latest post" floe card, and BlogPost's
+//                        series links. Not tag links — those go to a list,
+//                        not a post.
+//
+// To swap either sound file: same mechanism as docs/how-to-swap-audio.md
+// describes for the ambient tracks — replace the file, keep the name.
+---
+
+<audio id="click-tab-audio" preload="none" src="/audio/click-tab.mp3"></audio>
+<audio id="click-article-audio" preload="none" src="/audio/click-article.mp3"></audio>
+
+<script>
+	const STORAGE_KEY = 'mm:sfx-enabled';
+
+	function isEnabled(): boolean {
+		const stored = localStorage.getItem(STORAGE_KEY);
+		// Unset means "never chosen yet" — defaults to on, same convention
+		// as the Ambient Soundtrack's mm:music-enabled.
+		return stored === null ? true : stored === 'true';
+	}
+
+	function setEnabled(enabled: boolean) {
+		localStorage.setItem(STORAGE_KEY, String(enabled));
+	}
+
+	function play(id: string) {
+		if (!isEnabled()) return;
+		const audio = document.getElementById(id) as HTMLAudioElement | null;
+		if (!audio) return;
+		audio.currentTime = 0;
+		audio.play().catch(() => {
+			// Missing file, or autoplay blocked before any gesture yet — the
+			// click that got us here is itself a gesture for future plays,
+			// so this only matters for the very first click of a session.
+		});
+	}
+
+	function onClick(event: MouseEvent) {
+		const target = event.target;
+		const trigger = target instanceof Element ? target.closest<HTMLElement>('[data-sfx]') : null;
+		if (!trigger) return;
+		if (trigger.dataset.sfx === 'tab') play('click-tab-audio');
+		else if (trigger.dataset.sfx === 'article') play('click-article-audio');
+	}
+
+	(window as any).__mmSetSfxEnabled = setEnabled;
+	(window as any).__mmIsSfxEnabled = isEnabled;
+
+	// One delegated listener for the whole session — re-attaching per page
+	// would stack duplicate listeners, same reasoning as AmbientAudio.astro's
+	// __mmAudioInitialized guard.
+	if (!(window as any).__mmSfxInitialized) {
+		(window as any).__mmSfxInitialized = true;
+		document.addEventListener('click', onClick, true);
+	}
+</script>

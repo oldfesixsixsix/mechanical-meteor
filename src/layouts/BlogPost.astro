@@ -6,6 +6,7 @@ import CrackDivider from '../components/CrackDivider.astro';
 import AmbientAudio from '../components/AmbientAudio.astro';
 import FormattedDate from '../components/FormattedDate.astro';
 import Nav from '../components/Nav.astro';
+import SoundEffects from '../components/SoundEffects.astro';
 
 type Props = CollectionEntry<'blog'>['data'] & { id: CollectionEntry<'blog'>['id'] };
 
@@ -26,6 +27,7 @@ const seriesIndex = seriesEntries.findIndex((entry) => entry.id === id);
 
 	<body>
 		<AmbientAudio />
+		<SoundEffects />
 		<div id="world">
 			<div class="canvas-wrap" id="canvas-wrap" aria-hidden="true"></div>
 
@@ -80,7 +82,7 @@ const seriesIndex = seriesEntries.findIndex((entry) => entry.id === id);
 												{index === seriesIndex ? (
 													entry.data.title
 												) : (
-													<a href={`/blog/${entry.id}/`}>
+													<a href={`/blog/${entry.id}/`} data-sfx="article">
 														{entry.data.title}
 													</a>
 												)}

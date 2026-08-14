@@ -3,6 +3,7 @@ import { getCollection } from 'astro:content';
 import BaseHead from '../components/BaseHead.astro';
 import AmbientAudio from '../components/AmbientAudio.astro';
 import Nav from '../components/Nav.astro';
+import SoundEffects from '../components/SoundEffects.astro';
 import { SITE_DESCRIPTION, SITE_TITLE } from '../consts';
 
 // Reused as the "最新一篇" entry point from /demo/hero_to_article_flow.html,
@@ -21,6 +22,7 @@ const latestPost = posts[0];
 	</head>
 	<body>
 		<AmbientAudio />
+		<SoundEffects />
 		<div id="world">
 			<!--
 			  The canvas sits fixed behind the whole page — including the nav — so
@@ -53,6 +55,7 @@ const latestPost = posts[0];
 										class="floe"
 										id="enter-article"
 										href={`/blog/${latestPost.id}/`}
+										data-sfx="article"
 									>
 										<div class="label">最新一篇</div>
 										<div class="title">{latestPost.data.title}</div>

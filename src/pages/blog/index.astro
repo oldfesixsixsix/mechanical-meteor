@@ -5,6 +5,7 @@ import AmbientAudio from '../../components/AmbientAudio.astro';
 import FloeGrid from '../../components/FloeGrid.astro';
 import IceBackground from '../../components/IceBackground.astro';
 import Nav from '../../components/Nav.astro';
+import SoundEffects from '../../components/SoundEffects.astro';
 import { SITE_DESCRIPTION, SITE_TITLE } from '../../consts';
 
 const posts = (await getCollection('blog', ({ data }) => !data.draft)).sort(
@@ -19,6 +20,7 @@ const posts = (await getCollection('blog', ({ data }) => !data.draft)).sort(
 	</head>
 	<body>
 		<AmbientAudio />
+		<SoundEffects />
 		<div id="world">
 			<IceBackground />
 			<div class="scrim"></div>
