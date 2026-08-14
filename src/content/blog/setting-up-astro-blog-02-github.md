@@ -60,7 +60,7 @@ git push -u origin main
 HTTPS 能動，但總覺得不是長久之計——這台機器顯然是刻意設定了多組 SSH 身份，代表應該有一個「對的」用法，只是我一開始沒用對。回頭查了 `~/.ssh/config`：
 
 ```
-Host github.com-mac
+Host github.com-my
   HostName github.com
   User git
   IdentityFile ~/.ssh/id_ed25519_my-account

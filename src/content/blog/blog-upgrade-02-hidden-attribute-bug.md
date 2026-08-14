@@ -1,5 +1,5 @@
 ---
-title: '除錯筆記：一個 `[hidden]` 屬性教我的 CSS cascade 課'
+title: '除錯筆記：一個 [hidden] 屬性教我的 CSS cascade 課'
 description: '記錄實測搜尋彈窗時發現的 CSS bug：author 樣式蓋過 [hidden] 屬性，讓一個「關閉」的彈窗一直攔截整個網站的點擊。'
 pubDate: 2026-08-05
 tags: ['Astro', 'CSS', '除錯']
@@ -33,7 +33,7 @@ document.elementFromPoint(771, 39)
 
 點在 Header 搜尋圖示座標上，瀏覽器回報的卻是搜尋彈窗的背景遮罩（backdrop）。而這個背景遮罩，照設計應該只在彈窗「打開」的時候才會出現、蓋住整個畫面；彈窗關閉的時候，理論上完全不該出現在畫面上，更不可能擋在 Header 前面。
 
-## 根因：author CSS 蓋過了 `[hidden]`
+## 根因：author CSS 蓋過了 [hidden]
 
 檢查 `SearchModal.astro` 的 CSS：
 
