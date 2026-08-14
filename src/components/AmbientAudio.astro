@@ -3,11 +3,15 @@
 // transition:persist so the same DOM node — and its playback position —
 // survives every real navigation, unlike the Continuous World's 3D scenes,
 // which deliberately reinitialize per page (see docs/adr/0005-...). Rendered
-// on every page, including the /settings Utility Page, which reads/writes
-// the same element and localStorage key via window.__mmSetMusicEnabled.
+// on every page, including /settings, which reads/writes the same element
+// and localStorage key via window.__mmSetMusicEnabled.
+//
+// To swap the track: see docs/how-to-swap-audio.md. The file is named
+// ambient.mp3 (not the track's own title) specifically so a future swap is
+// "replace this file," not "replace this file and edit this src attribute."
 ---
 
-<audio id="ambient-audio" transition:persist loop preload="none" src="/audio/frost-walrus-stage.mp3">
+<audio id="ambient-audio" transition:persist loop preload="none" src="/audio/ambient.mp3">
 </audio>
 
 <script>
