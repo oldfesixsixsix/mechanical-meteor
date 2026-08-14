@@ -1,12 +1,6 @@
 ---
-// A Utility Page (see CONTEXT.md): same 3D background and Nav as every other
-// page, but not a room in Directional Transition's spatial model — the links
-// into this page carry no data-nav-direction, so it's entered/left with
-// Astro's plain default fade instead of a directional slide. See
-// docs/adr/0005-ambient-soundtrack-and-utility-pages.md.
 import AmbientAudio from '../components/AmbientAudio.astro';
 import BaseHead from '../components/BaseHead.astro';
-import DirectionalTransition from '../components/DirectionalTransition.astro';
 import IceBackground from '../components/IceBackground.astro';
 import Nav from '../components/Nav.astro';
 import { SITE_DESCRIPTION, SITE_TITLE } from '../consts';
@@ -18,7 +12,6 @@ import { SITE_DESCRIPTION, SITE_TITLE } from '../consts';
 		<BaseHead title={`設定 · ${SITE_TITLE}`} description={SITE_DESCRIPTION} />
 	</head>
 	<body>
-		<DirectionalTransition />
 		<AmbientAudio />
 		<div id="world">
 			<IceBackground />

@@ -168,7 +168,12 @@ hr {
 }
 
 /*
-  Directional Transition (see CONTEXT.md and DirectionalTransition.astro)
-  slides #world in a fixed direction, then calls navigate() — not a CSS
-  view-transition rule.
+  #world is the Continuous World layout wrapper (see CONTEXT.md) every page
+  renders right after <body>: the 3D background canvas and page content sit
+  inside it. Base layout only — each page adds its own background/overflow
+  rules in a local #world block.
 */
+#world {
+	position: relative;
+	min-height: 100vh;
+}

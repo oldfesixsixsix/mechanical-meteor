@@ -55,9 +55,7 @@ const { title, description, image = FallbackImage } = Astro.props;
 
 <!--
   Site-wide client-side routing (required by the View Transitions API — it
-  cannot be scoped to a subset of routes). Directional Transition (see
-  CONTEXT.md and DirectionalTransition.astro) uses navigate() from
-  astro:transitions/client after a CSS slide, so every page needs this
-  enabled regardless of which direction the slide plays.
+  cannot be scoped to a subset of routes). Every navigation plays Astro's
+  default fade (see CONTEXT.md's Uniform Fade Transition entry).
 -->
 <ClientRouter />

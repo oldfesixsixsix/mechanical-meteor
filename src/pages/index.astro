@@ -2,7 +2,6 @@
 import { getCollection } from 'astro:content';
 import BaseHead from '../components/BaseHead.astro';
 import AmbientAudio from '../components/AmbientAudio.astro';
-import DirectionalTransition from '../components/DirectionalTransition.astro';
 import Nav from '../components/Nav.astro';
 import { SITE_DESCRIPTION, SITE_TITLE } from '../consts';
 
@@ -21,7 +20,6 @@ const latestPost = posts[0];
 		<BaseHead title={SITE_TITLE} description={SITE_DESCRIPTION} />
 	</head>
 	<body>
-		<DirectionalTransition />
 		<AmbientAudio />
 		<div id="world">
 			<!--
@@ -55,7 +53,6 @@ const latestPost = posts[0];
 										class="floe"
 										id="enter-article"
 										href={`/blog/${latestPost.id}/`}
-										data-nav-direction="right"
 									>
 										<div class="label">最新一篇</div>
 										<div class="title">{latestPost.data.title}</div>

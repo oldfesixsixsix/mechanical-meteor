@@ -4,7 +4,6 @@ import { type CollectionEntry, getCollection } from 'astro:content';
 import BaseHead from '../components/BaseHead.astro';
 import CrackDivider from '../components/CrackDivider.astro';
 import AmbientAudio from '../components/AmbientAudio.astro';
-import DirectionalTransition from '../components/DirectionalTransition.astro';
 import FormattedDate from '../components/FormattedDate.astro';
 import Nav from '../components/Nav.astro';
 
@@ -26,7 +25,6 @@ const seriesIndex = seriesEntries.findIndex((entry) => entry.id === id);
 	</head>
 
 	<body>
-		<DirectionalTransition />
 		<AmbientAudio />
 		<div id="world">
 			<div class="canvas-wrap" id="canvas-wrap" aria-hidden="true"></div>
@@ -61,7 +59,7 @@ const seriesIndex = seriesEntries.findIndex((entry) => entry.id === id);
 								tags && tags.length > 0 && (
 									<div class="tags" data-pagefind-ignore>
 										{tags.map((tag) => (
-											<a class="tag" href={`/tags/${tag}/`} data-nav-direction="right">
+											<a class="tag" href={`/tags/${tag}/`}>
 												{tag}
 											</a>
 										))}
@@ -82,7 +80,7 @@ const seriesIndex = seriesEntries.findIndex((entry) => entry.id === id);
 												{index === seriesIndex ? (
 													entry.data.title
 												) : (
-													<a href={`/blog/${entry.id}/`} data-nav-direction="right">
+													<a href={`/blog/${entry.id}/`}>
 														{entry.data.title}
 													</a>
 												)}

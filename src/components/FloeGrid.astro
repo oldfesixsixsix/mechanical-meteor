@@ -17,7 +17,7 @@ const { posts } = Astro.props;
 	{
 		posts.map((post) => (
 			<li>
-				<a class="floe-card" href={`/blog/${post.id}/`} data-nav-direction="right">
+				<a class="floe-card" href={`/blog/${post.id}/`}>
 					{post.data.tags && post.data.tags.length > 0 && <div class="tag">{post.data.tags[0]}</div>}
 					<div class="title">{post.data.title}</div>
 					<div class="excerpt">{post.data.description}</div>

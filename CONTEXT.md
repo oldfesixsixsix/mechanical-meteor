@@ -24,8 +24,10 @@ same frozen lake, viewed from a different camera position. Implemented as
 independent per-page Three.js instances (not one persisted renderer — see the
 Decisions Log entry below for why), kept visually continuous by sharing a
 fixed Perlin seed, palette, and terrain parameters across pages via a common
-utility module. Moving between pages plays a *Directional Transition* rather
-than a hard cut, reinforcing the illusion of one contiguous place.
+utility module. Moving between pages plays a *Uniform Fade Transition* rather
+than a hard cut. On mobile viewports each page's scene renders a single frame
+and pauses its render loop instead of animating continuously — see the Mobile
+Static-Frame Rendering decision below.
 
 ### Reading Card
 The glass panel that long-form body text (blog post body, About page body) is
@@ -68,37 +70,36 @@ toward the ice, a whiteout overlay fading to full opacity, a real `navigate()`
 call fired at full whiteout, then the whiteout fading out on arrival. There is
 no zone boundary left to fire it at.
 
-### Directional Transition
-The transition that replaced Threshold Transition once the whole site became
-one *Continuous World*: the viewport slides in a fixed direction (down,
-right, up, or left) between pages, standing in for movement through one
-contiguous space rather than a hard cut. Two rules fix the direction for any
-navigation:
-- **Content depth** moves right: blog index → post, and post → a
-  tag-filtered list (clicking one of the post's tags) both slide right — each
-  is "going deeper into content," so they share a direction.
-- **Nav-tab clicks are always one direct slide to that tab's canonical
-  direction from Home, never a multi-step reverse of however the current page
-  was reached.** Home's canonical direction is down (Home → blog index);
-  About's is left (Home → About). Clicking Home from any depth (a post, a
-  tag list, About) plays a single "up" slide straight back; clicking Blog or
-  About from any depth plays a single slide straight to that tab's canonical
-  direction, never routed back through Home first.
+### Directional Transition (retired)
+**Retired by the Uniform Fade Transition decision below** — kept only as a
+historical record. Previously: the transition that replaced Threshold
+Transition once the whole site became one *Continuous World* — the viewport
+slid in a fixed direction (down, right, up, or left) between pages, standing
+in for movement through one contiguous space rather than a hard cut, with a
+canonical (not actual-path-derived) direction per nav tab. Retired because,
+in practice, a fixed direction that doesn't reflect how you actually navigated
+there read as arbitrary rather than orienting once you'd clicked around the
+site for a while. Every navigation now plays the same fade — see *Uniform
+Fade Transition*.
 
-### Utility Page
-A page that renders inside the *Continuous World* (same 3D background, same
-Nav) but is not a "room" in the Directional Transition's spatial model — it
-has no canonical up/down/left/right slide direction of its own, and entering
-or leaving it plays Astro's plain default fade instead. Introduced for
-`/settings`, which needed to look like it belongs to the same world (visual
-consistency was a deliberate ask) but had no cardinal direction left to claim
-(up/down/left already belong to Home/Blog/About; right already means
-*Directional Transition*'s content-depth). A link into a Utility Page simply
-omits `data-nav-direction`, so `DirectionalTransition.astro`'s click delegate
-ignores it and lets Astro's built-in transition handle it. Any future
-non-content page (a privacy page, a colophon, etc.) that doesn't fit the
-content-depth-or-nav-tab shape should be considered a Utility Page rather than
-forcing a new direction into the model.
+### Uniform Fade Transition
+The one transition every navigation plays, nav-tab or content-depth link
+alike: Astro's plain default fade (the same treatment `/settings` already had
+before this decision). Replaced *Directional Transition*'s per-link
+`data-nav-direction` slide, which is deleted outright rather than disabled —
+see `docs/adr/0007-uniform-fade-transition.md`. The *Continuous World*'s
+visual premise (same terrain seed/palette per page) is unaffected; only the
+navigation *feel* changed — the "moving through one contiguous space"
+illusion no longer gets transition-level reinforcement.
+
+### Utility Page (retired)
+**Retired along with Directional Transition** — kept only as a historical
+record. Previously: a page that rendered inside the *Continuous World* but
+claimed no canonical slide direction (`/settings` was the only one), opting
+out of Directional Transition's model via a plain fade. Once every page uses
+the same fade (see *Uniform Fade Transition*), this category stopped naming a
+real distinction — nothing needs to "opt out" of a model that no longer
+exists — so it's retired rather than redefined.
 
 ### Ambient Soundtrack
 Sitewide background music, played through one `<audio>` element marked
@@ -126,6 +127,51 @@ installed, so a third-party animation library would only ever run as a bare
 directive, just no longer confined to one file.
 
 ## Decisions Log
+
+### Uniform fade transition, retiring Directional Transition and Utility Page (current)
+- **Problem**: *Directional Transition*'s canonical-not-actual-path direction
+  per nav tab (Home always up, Blog always down, About always left,
+  regardless of where you clicked from) read as arbitrary after repeated use
+  rather than orienting — flagged directly by the site owner as something
+  that "gets annoying after a while."
+- **Decision**: every navigation, nav-tab or content-depth link alike, now
+  plays the same *Uniform Fade Transition*. `DirectionalTransition.astro` and
+  every `data-nav-direction` attribute (`Nav.astro`, `FloeGrid.astro`,
+  `BlogPost.astro`, `index.astro`) and its CSS keyframes are deleted, not
+  disabled-in-place — there's no signal a directional model will be wanted
+  back.
+- **Utility Page retired, not redefined**: it existed solely to name pages
+  that opted out of the (now-gone) directional model; with nothing left to
+  opt out of, the category stopped meaning anything distinct and is retired
+  alongside it.
+- **What's unaffected**: *Continuous World*'s visual premise (every page
+  reads as the same frozen lake from a different camera) is untouched — this
+  decision only changes how navigation *feels*, not what each page looks
+  like.
+- **New ADR**: see `docs/adr/0007-uniform-fade-transition.md`.
+
+### Mobile static-frame rendering + render-on-demand (current)
+- **Problem**: every *Continuous World* scene's `requestAnimationFrame` loop
+  ran continuously regardless of device, competing with scroll/touch handling
+  on mobile GPUs. The existing sub-640px breakpoint already lowered segment
+  and particle counts (see the Site-wide continuous 3D world entry below),
+  but that only reduced per-frame cost — it didn't stop frames from being
+  drawn continuously, which was the actual source of visible jank while
+  reading on mobile.
+- **Decision**: on mobile, every scene (`index.astro`, `IceBackground.astro`,
+  `BlogPost.astro`) renders exactly one frame on init, then cancels its
+  render loop instead of running it continuously. The breakpoint check stays
+  a one-time read at page load, consistent with how it's already checked
+  elsewhere — no resize/orientation-change listener.
+- **Homepage stays interactive via render-on-demand**: drag-to-orbit and the
+  regen button still work on mobile, but draw a frame only in direct response
+  to input and stop again once input stops, rather than sharing the desktop's
+  always-on loop.
+- **Rejected alternative**: swapping WebGL out for a static image/CSS
+  gradient on mobile — would need separate art assets and would break
+  *Continuous World*'s "same frozen lake, different camera" premise, since
+  mobile would visibly not be the same scene as desktop.
+- **New ADR**: see `docs/adr/0006-mobile-static-frame-rendering.md`.
 
 ### Ambient Soundtrack + a Settings Utility Page (current)
 - **Feature**: sitewide background music (an MP3 the site owner personally

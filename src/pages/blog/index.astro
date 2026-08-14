@@ -2,7 +2,6 @@
 import { getCollection } from 'astro:content';
 import BaseHead from '../../components/BaseHead.astro';
 import AmbientAudio from '../../components/AmbientAudio.astro';
-import DirectionalTransition from '../../components/DirectionalTransition.astro';
 import FloeGrid from '../../components/FloeGrid.astro';
 import IceBackground from '../../components/IceBackground.astro';
 import Nav from '../../components/Nav.astro';
@@ -19,7 +18,6 @@ const posts = (await getCollection('blog', ({ data }) => !data.draft)).sort(
 		<BaseHead title={SITE_TITLE} description={SITE_DESCRIPTION} />
 	</head>
 	<body>
-		<DirectionalTransition />
 		<AmbientAudio />
 		<div id="world">
 			<IceBackground />
