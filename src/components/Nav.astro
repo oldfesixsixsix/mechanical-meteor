@@ -1,4 +1,6 @@
 ---
+import SearchModal from './SearchModal.astro';
+
 // The site-wide minimal nav for the Continuous World (see CONTEXT.md):
 // just the Home/Blog/About tab links, floating directly over the 3D scene —
 // no bar/logo container, so there's no separate header-like band behind it.
@@ -15,6 +17,7 @@ const isSettings = path.startsWith('/settings');
 	<a href="/" aria-current={isHome ? 'page' : undefined}>Home</a>
 	<a href="/blog" aria-current={isBlog ? 'page' : undefined}>Blog</a>
 	<a href="/about" aria-current={isAbout ? 'page' : undefined}>About</a>
+	<SearchModal />
 	<a href="/settings" class="mm-nav-icon" aria-current={isSettings ? 'page' : undefined} aria-label="設定">
 		<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8">
 			<circle cx="12" cy="12" r="3.2"></circle>
