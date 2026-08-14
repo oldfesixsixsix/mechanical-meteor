@@ -212,10 +212,12 @@ const latestPost = posts[0];
 						theta -= dx * 0.005;
 						phi = THREE.MathUtils.clamp(phi - dy * 0.005, 0.4, 1.5);
 						updateCamera();
+						if (isMobile) renderFrame();
 					}
 					function onWheel(e: WheelEvent) {
 						radius = THREE.MathUtils.clamp(radius + e.deltaY * 0.01, 8, 28);
 						updateCamera();
+						if (isMobile) renderFrame();
 					}
 					renderer.domElement.addEventListener('pointerdown', onPointerDown);
 					window.addEventListener('pointerup', onPointerUp);
@@ -225,6 +227,7 @@ const latestPost = posts[0];
 					// ---------- regenerate button ----------
 					function onRegenClick() {
 						buildTerrain(Math.random() * 1000);
+						if (isMobile) renderFrame();
 					}
 					regenButton!.addEventListener('click', onRegenClick);
 					regenButton!.hidden = false;
@@ -232,8 +235,7 @@ const latestPost = posts[0];
 					// ---------- render loop ----------
 					const clock = new THREE.Clock();
 					let rafId = 0;
-					function animate() {
-						rafId = requestAnimationFrame(animate);
+					function renderFrame() {
 						const dt = clock.getDelta();
 						const elapsed = clock.getElapsedTime();
 
@@ -250,7 +252,21 @@ const latestPost = posts[0];
 
 						renderer.render(scene, camera);
 					}
-					animate();
+					function animate() {
+						rafId = requestAnimationFrame(animate);
+						renderFrame();
+					}
+					// Mobile renders a single frame and stops — a continuous rAF loop
+					// competes with scroll/touch handling on mobile GPUs, which is the
+					// actual source of reading-page jank (see docs/adr/0006). Drag and
+					// regen stay interactive via render-on-demand (see onPointerMove/
+					// onWheel/onRegenClick above) instead of sharing this loop. Desktop
+					// keeps the always-on loop.
+					if (isMobile) {
+						renderFrame();
+					} else {
+						animate();
+					}
 
 					// ---------- resource disposal on real navigation away from home ----------
 					function disposeScene() {

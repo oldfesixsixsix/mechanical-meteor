@@ -96,8 +96,7 @@
 
 		const clock = new THREE.Clock();
 		let rafId = 0;
-		function animate() {
-			rafId = requestAnimationFrame(animate);
+		function renderFrame() {
 			const dt = clock.getDelta();
 			const elapsed = clock.getElapsedTime();
 
@@ -108,7 +107,19 @@
 
 			renderer.render(scene, camera);
 		}
-		animate();
+		function animate() {
+			rafId = requestAnimationFrame(animate);
+			renderFrame();
+		}
+		// Mobile renders a single frame and stops — a continuous rAF loop
+		// competes with scroll/touch handling on mobile GPUs, which is the
+		// actual source of reading-page jank (see docs/adr/0006). Desktop
+		// keeps the always-on loop.
+		if (isMobile) {
+			renderFrame();
+		} else {
+			animate();
+		}
 
 		function disposeScene() {
 			cancelAnimationFrame(rafId);
