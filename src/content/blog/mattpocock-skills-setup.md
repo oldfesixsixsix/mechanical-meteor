@@ -1,5 +1,5 @@
 ---
-title: '55 分鐘搞定 mattpocock/skills：解決 Symlink 消失與 grill-with-docs 設定全攻略'
+title: 'mattpocock/skills：解決 Symlink 消失與 grill-with-docs 設定全攻略'
 description: '記錄安裝 mattpocock/skills 時遇到的 symlink 消失踩坑過程，以及從 grill-with-docs 到 code-review 的完整 skill 工作流整理。'
 pubDate: '2026-07-14T06:21:05.000-07:00'
 updatedDate: '2026-07-15T08:52:57.615-07:00'
