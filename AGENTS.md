@@ -22,6 +22,12 @@ Default five-role vocabulary (`needs-triage`, `needs-info`, `ready-for-agent`, `
 
 Single-context: `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agents/domain.md`.
 
+### Blog publishing
+
+Drafts in `article-prepare/` are reviewed one at a time — content first, then
+mechanical formatting — before moving into `src/content/blog/`. See
+`docs/agents/blog-publishing.md`.
+
 ## Documentation
 
 Full documentation: https://docs.astro.build

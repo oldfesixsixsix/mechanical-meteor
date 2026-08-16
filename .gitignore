@@ -24,3 +24,6 @@ pnpm-debug.log*
 .idea/
 .vercel
 .env*
+
+# local scratch: raw blog drafts awaiting review (see docs/agents/blog-publishing.md)
+article-prepare/
