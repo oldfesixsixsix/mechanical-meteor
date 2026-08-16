@@ -30,12 +30,28 @@ import { SITE_DESCRIPTION, SITE_TITLE } from '../consts';
 				<div class="settings-list">
 					<div class="setting-row">
 						<div class="setting-copy">
-							<div class="setting-label">環境音</div>
-							<div class="setting-desc">背景音樂與雪地環境音，在整個網站持續播放，不會因為換頁而中斷。</div>
+							<div class="setting-label">背景音樂</div>
+							<div class="setting-desc">網站的背景音樂，在整個網站持續播放，不會因為換頁而中斷。</div>
 						</div>
 						<button
 							type="button"
 							id="music-toggle"
+							class="toggle"
+							role="switch"
+							aria-checked="true"
+							aria-label="背景音樂開關"
+						>
+							<span class="toggle-track"><span class="toggle-thumb"></span></span>
+						</button>
+					</div>
+					<div class="setting-row">
+						<div class="setting-copy">
+							<div class="setting-label">環境音</div>
+							<div class="setting-desc">疊在背景音樂下方的雪地環境音，音量較低，可獨立開關。</div>
+						</div>
+						<button
+							type="button"
+							id="snow-toggle"
 							class="toggle"
 							role="switch"
 							aria-checked="true"
@@ -47,7 +63,7 @@ import { SITE_DESCRIPTION, SITE_TITLE } from '../consts';
 					<div class="setting-row">
 						<div class="setting-copy">
 							<div class="setting-label">音效</div>
-							<div class="setting-desc">切換分頁、點進文章時的提示音效，跟環境音分開控制。</div>
+							<div class="setting-desc">切換分頁、點進文章時的提示音效，跟背景音樂、環境音分開控制。</div>
 						</div>
 						<button
 							type="button"
@@ -66,10 +82,11 @@ import { SITE_DESCRIPTION, SITE_TITLE } from '../consts';
 
 		<script>
 			// Wires a toggle button to a pair of window-exposed get/set
-			// functions (one pair per audio subsystem — Ambient Soundtrack's
-			// __mmIsMusicEnabled/__mmSetMusicEnabled, SoundEffects' own
+			// functions (one pair per audio subsystem — background music's
+			// __mmIsMusicEnabled/__mmSetMusicEnabled, snow ambience's own
+			// __mmIsSnowEnabled/__mmSetSnowEnabled, SoundEffects' own
 			// __mmIsSfxEnabled/__mmSetSfxEnabled) — same shape, independent
-			// state, so this one function drives both toggles below.
+			// state, so this one function drives all three toggles below.
 			function wireToggle(buttonId: string, isEnabledKey: string, setEnabledKey: string) {
 				const button = document.getElementById(buttonId);
 				if (!button) return;
@@ -93,6 +110,7 @@ import { SITE_DESCRIPTION, SITE_TITLE } from '../consts';
 
 			function init() {
 				wireToggle('music-toggle', '__mmIsMusicEnabled', '__mmSetMusicEnabled');
+				wireToggle('snow-toggle', '__mmIsSnowEnabled', '__mmSetSnowEnabled');
 				wireToggle('sfx-toggle', '__mmIsSfxEnabled', '__mmSetSfxEnabled');
 			}
 

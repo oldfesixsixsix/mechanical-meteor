@@ -4,9 +4,9 @@
 // survive every real navigation, unlike the Continuous World's 3D scenes,
 // which deliberately reinitialize per page (see docs/adr/0005-...). Rendered
 // on every page, including /settings, which reads/writes the same elements
-// and localStorage key via window.__mmSetMusicEnabled. Both tracks share one
-// enabled/disabled state — see CONTEXT.md's Ambient Soundtrack entry for why
-// this wasn't split into two independent toggles.
+// via window.__mmSetMusicEnabled / window.__mmSetSnowEnabled. Background
+// music and snow ambience each have their own on/off state and localStorage
+// key — see CONTEXT.md's Ambient Soundtrack and Snow Ambience entries.
 //
 // To swap either track: see docs/how-to-swap-audio.md. Both files are named
 // generically (ambient.mp3, snow-ambience.mp3) rather than after the
@@ -20,26 +20,28 @@
 </audio>
 
 <script>
-	const STORAGE_KEY = 'mm:music-enabled';
+	const MUSIC_STORAGE_KEY = 'mm:music-enabled';
+	const SNOW_STORAGE_KEY = 'mm:snow-enabled';
 	// Snow ambience sits under the music, not alongside it at equal weight —
 	// this is the only place its mix level is set.
 	const SNOW_AMBIENCE_VOLUME = 0.45;
 
-	function isEnabled(): boolean {
-		const stored = localStorage.getItem(STORAGE_KEY);
+	function isEnabled(key: string): boolean {
+		const stored = localStorage.getItem(key);
 		// Unset means "never chosen yet" — defaults to on (see CONTEXT.md).
 		return stored === null ? true : stored === 'true';
 	}
 
-	function setEnabled(enabled: boolean) {
-		localStorage.setItem(STORAGE_KEY, String(enabled));
+	function setEnabled(key: string, enabled: boolean) {
+		localStorage.setItem(key, String(enabled));
 	}
 
-	function getAudioElements(): HTMLAudioElement[] {
-		return [
-			document.getElementById('ambient-audio') as HTMLAudioElement | null,
-			document.getElementById('snow-ambience-audio') as HTMLAudioElement | null,
-		].filter((el): el is HTMLAudioElement => el !== null);
+	function getAmbientAudio(): HTMLAudioElement | null {
+		return document.getElementById('ambient-audio') as HTMLAudioElement | null;
+	}
+
+	function getSnowAudio(): HTMLAudioElement | null {
+		return document.getElementById('snow-ambience-audio') as HTMLAudioElement | null;
 	}
 
 	// Safe to call anytime: browsers silently reject play() before a user
@@ -47,9 +49,15 @@
 	// the first click/keydown below (or succeeds immediately on later
 	// navigations, once that gesture has already happened this session).
 	function tryPlay() {
-		if (!isEnabled()) return;
-		for (const audio of getAudioElements()) {
-			audio.play().catch(() => {
+		const ambient = getAmbientAudio();
+		if (ambient && isEnabled(MUSIC_STORAGE_KEY)) {
+			ambient.play().catch(() => {
+				// Autoplay blocked — the first-gesture listener will retry.
+			});
+		}
+		const snow = getSnowAudio();
+		if (snow && isEnabled(SNOW_STORAGE_KEY)) {
+			snow.play().catch(() => {
 				// Autoplay blocked — the first-gesture listener will retry.
 			});
 		}
@@ -62,23 +70,29 @@
 	}
 
 	(window as any).__mmSetMusicEnabled = function (enabled: boolean) {
-		setEnabled(enabled);
-		for (const audio of getAudioElements()) {
-			if (enabled) {
-				audio.play().catch(() => {});
-			} else {
-				audio.pause();
-			}
-		}
+		setEnabled(MUSIC_STORAGE_KEY, enabled);
+		const ambient = getAmbientAudio();
+		if (!ambient) return;
+		if (enabled) ambient.play().catch(() => {});
+		else ambient.pause();
 	};
-	(window as any).__mmIsMusicEnabled = isEnabled;
+	(window as any).__mmIsMusicEnabled = () => isEnabled(MUSIC_STORAGE_KEY);
+
+	(window as any).__mmSetSnowEnabled = function (enabled: boolean) {
+		setEnabled(SNOW_STORAGE_KEY, enabled);
+		const snow = getSnowAudio();
+		if (!snow) return;
+		if (enabled) snow.play().catch(() => {});
+		else snow.pause();
+	};
+	(window as any).__mmIsSnowEnabled = () => isEnabled(SNOW_STORAGE_KEY);
 
 	// This setup (event listeners) only needs to happen once for the whole
 	// session — the persisted <audio> elements mean there's nothing to
 	// re-initialize per page, unlike the 3D scenes' data-astro-rerun pattern.
 	if (!(window as any).__mmAudioInitialized) {
 		(window as any).__mmAudioInitialized = true;
-		const snowAmbience = document.getElementById('snow-ambience-audio') as HTMLAudioElement | null;
+		const snowAmbience = getSnowAudio();
 		if (snowAmbience) snowAmbience.volume = SNOW_AMBIENCE_VOLUME;
 		document.addEventListener('astro:page-load', tryPlay);
 		document.addEventListener('click', onFirstGesture);

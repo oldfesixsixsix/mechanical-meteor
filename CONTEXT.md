@@ -110,8 +110,31 @@ rationale) because a re-initialized visual scene is imperceptible but a
 restarted audio track is jarring. Defaults to on for every visitor, but
 actual playback only starts on the first user gesture anywhere on the site
 (browser autoplay policy) and the on/off choice thereafter is remembered in
-`localStorage`. Controlled from the `/settings` *Utility Page*, not a
-persistent on-page toggle.
+`localStorage`. Controlled from the `/settings` *Utility Page* by its own
+independent toggle — a separate control from *Snow Ambience* and *UI Click
+Sounds*, not one combined "audio" switch; see the toggle-split Decisions Log
+entry below for why.
+
+### Snow Ambience
+A second, independently-toggled `transition:persist` `<audio>` element
+layered under the *Ambient Soundtrack* at a deliberately lower relative
+volume (`0.45` against the music's `1.0`) — texture, not a second melody.
+Same autoplay-on-first-gesture and `localStorage`-remembered on/off
+mechanics as the Ambient Soundtrack, but its own key and its own `/settings`
+toggle, independent of whether the background music is on.
+
+### UI Click Sounds
+One-shot sound effects (not looping, not persistent playback state) fired on
+nav-tab clicks and on links that enter a post, via a single delegated click
+listener keyed off a `data-sfx` attribute rather than per-trigger-site
+wiring. Controlled by its own `/settings` toggle, independent of *Ambient
+Soundtrack* and *Snow Ambience*. Like both of those, its `<audio>` elements
+are marked `transition:persist` — without it, a soft-navigation recreates
+the elements via DOM-swap rather than the browser's HTML parser, which never
+runs the media resource-selection algorithm, so `.play()` throws
+`NotSupportedError` on every page after the first. This was a real bug (only
+the very first click of a session ever made a sound) fixed by persisting the
+nodes, the same mechanism the other two audio layers already relied on.
 
 ### CSS-only, with a scoped Immersive Zone exception (retired)
 **Retired by the Site-wide Continuous World decision** — kept only as a
@@ -127,6 +150,33 @@ installed, so a third-party animation library would only ever run as a bare
 directive, just no longer confined to one file.
 
 ## Decisions Log
+
+### Split the combined audio toggle into three, and fixed a persistence bug (current)
+- **Bug**: UI click sounds (*UI Click Sounds*) only ever played on the very
+  first click of a session. Root cause, confirmed by reproducing it in a
+  live browser: their `<audio>` elements weren't marked `transition:persist`,
+  so every soft-navigation recreated them via DOM-swap instead of the
+  browser's HTML parser — the media resource-selection algorithm never ran,
+  and `.play()` threw `NotSupportedError` on every page after the first.
+  Fixed by persisting the nodes, the same mechanism *Ambient Soundtrack* and
+  *Snow Ambience* already used.
+- **Problem**: the `/settings` toggle labeled "環境音" (environment sound)
+  actually controlled both the background music and the snow ambience
+  together, as one combined on/off state — the name implied only the snow
+  layer, and the site owner couldn't isolate the snow track to confirm by
+  ear whether it was actually playing (it was — just deliberately mixed
+  quiet, see *Snow Ambience*).
+- **Decision**: split into three fully independent toggles — background
+  music, snow ambience, and UI click sounds (already independent) — each
+  with its own `localStorage` key and its own `/settings` row. No prior
+  decision blocked this: `AmbientAudio.astro`'s comment had claimed a
+  rationale lived in this file for why the toggle wasn't split, but no such
+  rationale actually existed here — a dangling reference from before *Snow
+  Ambience* existed, now corrected.
+- **Accepted edge case**: a returning visitor who'd already turned the old
+  combined toggle off will see the new, separate snow-ambience toggle default
+  back to on (no `localStorage` key exists for it yet, and unset means on).
+  Not worth migration code for a low-traffic personal site.
 
 ### Uniform fade transition, retiring Directional Transition and Utility Page (current)
 - **Problem**: *Directional Transition*'s canonical-not-actual-path direction

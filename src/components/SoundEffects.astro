@@ -3,6 +3,31 @@
 // Soundtrack's on/off state (AmbientAudio.astro) — controlled by its own
 // mm:sfx-enabled toggle on /settings via window.__mmSetSfxEnabled.
 //
+// Both <audio> elements are marked transition:persist, same reasoning as
+// AmbientAudio.astro's tracks: without it, every soft-navigation recreates
+// them via DOM-swap rather than the browser's HTML parser, which never runs
+// the media resource-selection algorithm — .play() then throws
+// NotSupportedError on every page after the first, so the sound only ever
+// worked on the very first click of a session. Persisting the nodes means
+// they're already loaded and playable across every navigation.
+//
+// persist alone isn't sufficient here though: unlike the ambient tracks
+// (which only ever start loading from astro:page-load, after a transition
+// has settled), an SFX play() is triggered by the very same click that
+// also kicks off the navigation. If that click's play() is still mid-fetch
+// when the transition relocates the persisted node into the new page, the
+// in-flight resource selection gets orphaned — readyState sticks at 0
+// forever (not an error, just never resolves) until .load() runs again.
+// Confirmed by reproducing it directly — including that calling .load()
+// synchronously on astro:page-load is too early: the orphaning apparently
+// hasn't finished settling by then, and the reset doesn't take; deferring
+// with setTimeout(0) is what actually makes it stick, confirmed the same
+// way. pendingPlayId below tracks whether the last play() this session
+// ever resolved — only reset the specific element that's still pending by
+// the next page-load (an actual orphan), not both unconditionally, so
+// navigations that never triggered an SFX click keep preload="none"'s
+// laziness instead of eagerly fetching both files every page view.
+//
 // A single delegated click listener (same shape as the retired
 // DirectionalTransition.astro's click delegate) reads which sound to play
 // off a data-sfx attribute rather than requiring every trigger site to wire
@@ -19,8 +44,8 @@
 // describes for the ambient tracks — replace the file, keep the name.
 ---
 
-<audio id="click-tab-audio" preload="none" src="/audio/click-tab.mp3"></audio>
-<audio id="click-article-audio" preload="none" src="/audio/click-article.mp3"></audio>
+<audio id="click-tab-audio" transition:persist preload="none" src="/audio/click-tab.mp3"></audio>
+<audio id="click-article-audio" transition:persist preload="none" src="/audio/click-article.mp3"></audio>
 
 <script>
 	const STORAGE_KEY = 'mm:sfx-enabled';
@@ -36,16 +61,24 @@
 		localStorage.setItem(STORAGE_KEY, String(enabled));
 	}
 
+	let pendingPlayId: string | null = null;
+
 	function play(id: string) {
 		if (!isEnabled()) return;
 		const audio = document.getElementById(id) as HTMLAudioElement | null;
 		if (!audio) return;
 		audio.currentTime = 0;
-		audio.play().catch(() => {
-			// Missing file, or autoplay blocked before any gesture yet — the
-			// click that got us here is itself a gesture for future plays,
-			// so this only matters for the very first click of a session.
-		});
+		pendingPlayId = id;
+		audio
+			.play()
+			.catch(() => {
+				// Missing file, or autoplay blocked before any gesture yet — the
+				// click that got us here is itself a gesture for future plays,
+				// so this only matters for the very first click of a session.
+			})
+			.finally(() => {
+				if (pendingPlayId === id) pendingPlayId = null;
+			});
 	}
 
 	function onClick(event: MouseEvent) {
@@ -59,11 +92,25 @@
 	(window as any).__mmSetSfxEnabled = setEnabled;
 	(window as any).__mmIsSfxEnabled = isEnabled;
 
+	// See the header comment: only reload the one element whose play() from
+	// the previous page never got a chance to resolve — a real orphan, not
+	// every SFX element on every navigation.
+	function resetOrphanedPlay() {
+		if (!pendingPlayId) return;
+		const id = pendingPlayId;
+		pendingPlayId = null;
+		setTimeout(() => {
+			const audio = document.getElementById(id) as HTMLAudioElement | null;
+			if (audio) audio.load();
+		}, 0);
+	}
+
 	// One delegated listener for the whole session — re-attaching per page
 	// would stack duplicate listeners, same reasoning as AmbientAudio.astro's
 	// __mmAudioInitialized guard.
 	if (!(window as any).__mmSfxInitialized) {
 		(window as any).__mmSfxInitialized = true;
 		document.addEventListener('click', onClick, true);
+		document.addEventListener('astro:page-load', resetOrphanedPlay);
 	}
 </script>
