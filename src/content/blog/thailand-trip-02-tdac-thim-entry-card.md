@@ -4,7 +4,7 @@ description: '出發泰國前查清楚 TDAC 與 THIM 的關係，直接跟著教
 pubDate: 2026-08-30
 tags: ['旅遊', 'TDAC', 'THIM', '入境卡']
 series: '泰國自由行'
-draft: true
+draft: false
 ---
 
 出發泰國前查入境流程，發現除了原本聽過的 TDAC，現在又多了一個 THIM App，兩個名字放在一起看得我一頭霧水，乾脆花時間把兩者關係搞懂，順便直接把 THIM 跑一遍。

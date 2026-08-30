@@ -4,7 +4,7 @@ description: '整理泰國 eSIM vs 電信漫遊的比較、AIS 與 True 怎麼�
 pubDate: 2026-08-30
 tags: ['旅遊', 'eSIM', 'AIS', 'True']
 series: '泰國自由行'
-draft: true
+draft: false
 ---
 
 出國前最容易卡關的小事之一，大概就是「網路到底要怎麼上」。這次曼谷+芭達雅 7 天 6 夜行程，把 eSIM 這件事整理成一篇完整攻略，從怎麼選、多少錢、什麼時候該裝，一次講清楚。
