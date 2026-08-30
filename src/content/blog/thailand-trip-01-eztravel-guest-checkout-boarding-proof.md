@@ -3,6 +3,7 @@ title: '易遊網訪客模式訂票，登機證明到底要不要擔心？'
 description: '記錄用易遊網（ezTravel）訪客模式訂票後，擔心沒有帳號／App 可以佐證訂位而查資料自保的過程，附上查證過的登機證明相關資訊。'
 pubDate: 2026-08-16
 tags: ['旅遊', '訂票', 'ezTravel']
+series: '泰國自由行'
 draft: false
 ---
 
