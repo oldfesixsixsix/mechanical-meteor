@@ -2,7 +2,7 @@
 title: '用 ChatGPT 自訂 GPT，把重複貼的提示詞包成不用再貼的工具'
 description: '記錄怎麼用 ChatGPT 的「探索 GPT」（GPT Builder）把一組圖片風格轉換提示詞包成自訂 GPT，之後上傳圖片就自動套用，不用每次重貼提示詞，順便說明為什麼這件事是在 ChatGPT 而不是 Claude 上解決的。'
 pubDate: '2026-09-01'
-draft: true
+draft: false
 tags: ['AI工具', 'ChatGPT', '自訂GPT', 'AI圖像生成']
 ---
 
