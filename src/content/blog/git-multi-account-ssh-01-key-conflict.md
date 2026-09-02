@@ -4,6 +4,7 @@ description: '記錄本機切換多個 GitHub 帳號時，SSH Key 被快取導�
 pubDate: '2026-07-10T08:50:52.000-07:00'
 updatedDate: '2026-07-15T08:54:43.565-07:00'
 tags: ['Git', 'GitHub', 'SSH']
+series: 'Git 多帳號 SSH'
 draft: false
 ---
 
